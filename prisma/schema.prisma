@@ -1,0 +1,16 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Nasabah {
+  id           Int     @id @default(autoincrement())
+  nama         String
+  nik          String  @unique
+  pekerjaan    String
+  penghasilan  Float
+}
