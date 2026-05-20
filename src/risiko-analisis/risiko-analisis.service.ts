@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PembayaranService } from '../pembayaran/pembayaran.service';
 import { PinjamanService } from '../pinjaman/pinjaman.service';
@@ -175,7 +175,7 @@ export class RisikoAnalisisService {
             },
         });
 
-        if (!nasabah) throw new Error('Nasabah tidak ditemukan');
+        if (!nasabah) throw new NotFoundException('Nasabah tidak ditemukan');
 
         // Get active loan
         const activeLoan = nasabah.pinjaman.find((p) => p.status === 'active');
