@@ -47,9 +47,17 @@ export class NasabahService {
     }
 
     async update(id: number, updateNasabahDto: UpdateNasabahDto) {
+        const updateData: any = {};
+
+        if (updateNasabahDto.nama !== undefined) updateData.nama = updateNasabahDto.nama;
+        if (updateNasabahDto.pekerjaan !== undefined) updateData.pekerjaan = updateNasabahDto.pekerjaan;
+        if (updateNasabahDto.penghasilan !== undefined) updateData.penghasilan = updateNasabahDto.penghasilan;
+        if (updateNasabahDto.saldoRataRata !== undefined) updateData.saldoRataRata = updateNasabahDto.saldoRataRata;
+        if (updateNasabahDto.estimasiPengeluaran !== undefined) updateData.estimasiPengeluaran = updateNasabahDto.estimasiPengeluaran;
+
         return await this.prisma.nasabah.update({
             where: { id },
-            data: updateNasabahDto,
+            data: updateData,
         });
     }
 
