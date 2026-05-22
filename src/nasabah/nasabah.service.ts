@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
+import { PaginatedNasabahResponse, ListNasabahDto } from './dto/list-nasabah.dto';
 
 @Injectable()
 export class NasabahService {
@@ -11,6 +12,67 @@ export class NasabahService {
         return await this.prisma.nasabah.create({
             data: createNasabahDto,
         });
+    }
+
+    async findAllPaginated(
+        page: number = 1,
+        limit: number = 10,
+        search?: string,
+        pekerjaan?: string,
+    ): Promise<PaginatedNasabahResponse> {
+        const skip = (page - 1) * limit;
+
+        // Build where condition for filtering
+        const whereCondition: any = {};
+        if (search) {
+            whereCondition.OR = [
+                { nama: { contains: search, mode: 'insensitive' } },
+                { nik: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+        if (pekerjaan) {
+            whereCondition.pekerjaan = pekerjaan;
+        }
+
+        // Get total count
+        const total = await this.prisma.nasabah.count({
+            where: whereCondition,
+        });
+
+        // Get paginated data (without deep relations for performance)
+        const data = await this.prisma.nasabah.findMany({
+            where: whereCondition,
+            skip,
+            take: limit,
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+
+        const totalPages = Math.ceil(total / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+
+        return {
+            data: data as ListNasabahDto[],
+            total,
+            page,
+            limit,
+            totalPages,
+            hasNextPage,
+            hasPrevPage,
+        };
     }
 
     async findAll() {
