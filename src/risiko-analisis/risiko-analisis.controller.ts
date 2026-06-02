@@ -7,9 +7,11 @@ import {
     Param,
     ParseIntPipe,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { RisikoAnalisisService } from './risiko-analisis.service';
 import { UpdateRiwayatKreditDto } from './dto/update-riwayat-kredit.dto';
 
+@ApiBearerAuth('JWT')
 @Controller('risiko-analisis')
 export class RisikoAnalisisController {
     constructor(private readonly risikoAnalisisService: RisikoAnalisisService) { }

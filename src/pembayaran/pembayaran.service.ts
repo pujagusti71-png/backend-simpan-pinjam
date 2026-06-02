@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePembayaranDto } from './dto/create-pembayaran.dto';
 
@@ -7,8 +7,18 @@ export class PembayaranService {
     constructor(private prisma: PrismaService) { }
 
     async create(createPembayaranDto: CreatePembayaranDto) {
+        const data = { ...createPembayaranDto } as any;
+
+        if (createPembayaranDto.dariTanggalSeharusnya) {
+            const parsedDate = new Date(createPembayaranDto.dariTanggalSeharusnya);
+            if (Number.isNaN(parsedDate.getTime())) {
+                throw new BadRequestException('dariTanggalSeharusnya tidak valid. Gunakan format ISO 8601.');
+            }
+            data.dariTanggalSeharusnya = parsedDate;
+        }
+
         return await this.prisma.pembayaran.create({
-            data: createPembayaranDto,
+            data,
         });
     }
 

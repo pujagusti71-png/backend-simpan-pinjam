@@ -7,9 +7,11 @@ import {
     Param,
     ParseIntPipe,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { RiwayatKreditService } from './riwayat-kredit.service';
 import { CreateRiwayatKreditDto } from './dto/create-riwayat-kredit.dto';
 
+@ApiBearerAuth('JWT')
 @Controller('riwayat-kredit')
 export class RiwayatKreditController {
     constructor(private readonly riwayatKreditService: RiwayatKreditService) { }

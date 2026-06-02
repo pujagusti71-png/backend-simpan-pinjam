@@ -8,15 +8,21 @@ import {
     Delete,
     ParseIntPipe,
 } from '@nestjs/common';
+import { ApiTags, ApiBody, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PinjamanService } from './pinjaman.service';
 import { CreatePinjamanDto } from './dto/create-pinjaman.dto';
 import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
 
+@ApiTags('pinjaman')
+@ApiBearerAuth('JWT')
 @Controller('pinjaman')
 export class PinjamanController {
     constructor(private readonly pinjamanService: PinjamanService) { }
 
     @Post()
+    @ApiOperation({ summary: 'Buat pinjaman baru' })
+    @ApiBody({ type: CreatePinjamanDto })
+    @ApiResponse({ status: 201, description: 'Pinjaman berhasil dibuat.' })
     create(@Body() createPinjamanDto: CreatePinjamanDto) {
         return this.pinjamanService.create(createPinjamanDto);
     }

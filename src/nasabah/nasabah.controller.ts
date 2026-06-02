@@ -27,19 +27,8 @@ export class NasabahController {
     }
 
     @Get()
-    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
-    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10, max: 100)' })
-    @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by nama or nik' })
-    @ApiQuery({ name: 'pekerjaan', required: false, type: String, description: 'Filter by pekerjaan (job)' })
-    findAll(
-        @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-        @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
-        @Query('search') search?: string,
-        @Query('pekerjaan') pekerjaan?: string,
-    ) {
-        // Cap limit at 100 for performance
-        const limitCapped = Math.min(Math.max(limit, 1), 100);
-        return this.nasabahService.findAllPaginated(page, limitCapped, search, pekerjaan);
+    findAll() {
+        return this.nasabahService.findAll();
     }
 
     @Get('nik/:nik')

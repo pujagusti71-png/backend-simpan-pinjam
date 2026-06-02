@@ -7,9 +7,11 @@ import {
     Delete,
     ParseIntPipe,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { PeminjamanEksternalService } from './peminjamaneksternal.service';
 import { CreatePeminjamanEksternalDto } from './dto/create-peminjamaneksternal.dto';
 
+@ApiBearerAuth('JWT')
 @Controller('peminjamaneksternal')
 export class PeminjamanEksternalController {
     constructor(

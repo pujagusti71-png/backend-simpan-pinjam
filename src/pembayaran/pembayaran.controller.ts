@@ -6,9 +6,11 @@ import {
     Param,
     ParseIntPipe,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { PembayaranService } from './pembayaran.service';
 import { CreatePembayaranDto } from './dto/create-pembayaran.dto';
 
+@ApiBearerAuth('JWT')
 @Controller('pembayaran')
 export class PembayaranController {
     constructor(private readonly pembayaranService: PembayaranService) { }

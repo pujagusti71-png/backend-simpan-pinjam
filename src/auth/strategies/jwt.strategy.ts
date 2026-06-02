@@ -14,14 +14,28 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: any) {
+        // First try to validate as admin
         const admin = await this.authService.validateAdmin(payload.sub);
-        if (!admin) {
-            return null;
+        if (admin) {
+            return {
+                id: admin.id,
+                username: admin.username,
+                email: admin.email,
+                role: 'admin',
+            };
         }
-        return {
-            id: admin.id,
-            username: admin.username,
-            email: admin.email,
-        };
+
+        // If not admin, try nasabah
+        const nasabah = await this.authService.validateNasabah(payload.sub as number);
+        if (nasabah) {
+            return {
+                id: nasabah.id,
+                nama: nasabah.nama,
+                nik: nasabah.nik,
+                role: 'nasabah',
+            };
+        }
+
+        return null;
     }
 }

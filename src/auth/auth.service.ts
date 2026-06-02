@@ -67,6 +67,18 @@ export class AuthService {
         return admin;
     }
 
+    async validateNasabah(id: number) {
+        const nasabah = await this.prisma.nasabah.findUnique({
+            where: { id },
+        });
+
+        if (!nasabah) {
+            return null;
+        }
+
+        return nasabah;
+    }
+
     async initializeAdmin() {
         try {
             // Check if admin already exists
