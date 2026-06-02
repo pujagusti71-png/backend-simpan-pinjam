@@ -34,11 +34,49 @@ model Nasabah {
   updatedAt             DateTime  @updatedAt
   
   pinjaman              Pinjaman[]
+  simpanan              Simpanan[]
   riwayatKredit         RiwayatKredit[]
   peminjamanEksternal   PeminjamanEksternal[]
   risikoNasabah         RisikoNasabah?
 
   @@map("Nasabah")
+}
+
+// Model Simpanan (Savings)
+model Simpanan {
+  id                    Int       @id @default(autoincrement())
+  nasabahId             Int
+  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+  
+  jumlahSetoran         Float     // Savings amount per transaction
+  bungaSimpanan         Float?    // Interest rate (%) if applicable
+  jenisInterest         String?   // "flat" or "efektif"
+  tanggalSetoran        DateTime  @default(now())
+  saldoAkhir            Float     // Final balance after transaction
+  status                String    @default("aktif") // "aktif", "ditarik", "ditunda"
+  keterangan            String?   // Optional notes
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  transaksiBunga        TransaksiBunga[]
+
+  @@map("Simpanan")
+}
+
+// Model Transaksi Bunga (Interest Transactions)
+model TransaksiBunga {
+  id                    Int       @id @default(autoincrement())
+  simpananId            Int
+  simpanan              Simpanan  @relation(fields: [simpananId], references: [id], onDelete: Cascade)
+  
+  nominalBunga          Float     // Interest amount
+  tanggalTransaksi      DateTime  @default(now())
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("TransaksiBunga")
 }
 
 // Model Pinjaman (Loan)

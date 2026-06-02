@@ -163,6 +163,113 @@ export class RisikoAnalisisService {
     }
 
     /**
+     * Pre-Loan Checking: Validate eligibility for new loan application
+     */
+    async preLoadChecking(nasabahId: number, proposedLoanAmount: number, proposedTenor: number) {
+        const nasabah = await this.prisma.nasabah.findUnique({
+            where: { id: nasabahId },
+            include: {
+                pinjaman: true,
+                riwayatKredit: true,
+                peminjamanEksternal: true,
+            },
+        });
+
+        if (!nasabah) throw new NotFoundException('Nasabah tidak ditemukan');
+
+        // Calculate proposed monthly installment (assuming flat interest of 2%)
+        const bunga = 2; // Default 2% for estimation
+        const tenor = proposedTenor || 12;
+        const totalBunga = (proposedLoanAmount * bunga * tenor) / 100;
+        const totalPembayaran = proposedLoanAmount + totalBunga;
+        const cicilanBulanan = totalPembayaran / tenor;
+
+        // Calculate new installment ratio if loan is approved
+        const activeLoan = nasabah.pinjaman.find((p) => p.status === 'active');
+        const totalCicilanDenganPinjamBaru = (activeLoan?.cicilanBulanan || 0) + cicilanBulanan;
+        const rasioSebelum = activeLoan && activeLoan.cicilanBulanan
+            ? this.calculateRasioSiklusPersentase(activeLoan.cicilanBulanan, nasabah.penghasilan)
+            : 0;
+        const rasioSesudah = this.calculateRasioSiklusPersentase(totalCicilanDenganPinjamBaru, nasabah.penghasilan);
+
+        // Get payment history
+        const totalPayments = await this.pembayaranService.getTotalPayments(nasabahId);
+        const latePayments = await this.pembayaranService.countLatePayments(nasabahId);
+        const delinquency = await this.pembayaranService.getDelinquencyPercentage(nasabahId);
+
+        // BI Checking
+        const biChecking = nasabah.riwayatKredit[0] || {
+            totalPinjamanAktif: 0,
+            statusBI: 'aman',
+            kolektibilitas: 'lancar',
+            pernahMacet: false,
+        };
+
+        // Determine eligibility
+        let status = 'APPROVED';
+        const reasons: string[] = [];
+
+        if (rasioSesudah > 50) {
+            status = 'REJECTED';
+            reasons.push(`Rasio cicilan terlalu tinggi: ${rasioSesudah}% (max 50%)`);
+        }
+
+        if (delinquency > 30) {
+            status = 'REJECTED';
+            reasons.push(`Tingkat keterlambatan terlalu tinggi: ${delinquency}%`);
+        }
+
+        if (biChecking.pernahMacet) {
+            if (status === 'APPROVED') status = 'REVIEW';
+            reasons.push('Pernah mengalami keterlambatan pembayaran di masa lalu');
+        }
+
+        if (biChecking.totalPinjamanAktif > 5) {
+            if (status === 'APPROVED') status = 'REVIEW';
+            reasons.push(`Terlalu banyak pinjaman aktif: ${biChecking.totalPinjamanAktif} pinjaman`);
+        }
+
+        if (nasabah.peminjamanEksternal.length > 3) {
+            if (status === 'APPROVED') status = 'REVIEW';
+            reasons.push(`Banyak pinjaman di tempat lain: ${nasabah.peminjamanEksternal.length} pinjaman`);
+        }
+
+        // Behavior check
+        const behaviorRisks = await this.detectRiskyBehavior(nasabahId);
+        if (behaviorRisks.length > 0) {
+            if (status === 'APPROVED') status = 'REVIEW';
+            reasons.push(`Indikasi perilaku berisiko: ${behaviorRisks.join(', ')}`);
+        }
+
+        return {
+            nasabahId,
+            namaLengkap: nasabah.nama,
+            penghasilan: nasabah.penghasilan,
+            nilaiPinjamanProposal: proposedLoanAmount,
+            tenor: tenor,
+            cicilanBulanProposal: Math.round(cicilanBulanan * 100) / 100,
+            totalBungaProposal: Math.round(totalBunga * 100) / 100,
+            totalPembayaranProposal: Math.round(totalPembayaran * 100) / 100,
+            rasioSebelum: Math.round(rasioSebelum * 100) / 100,
+            rasioSesudah: Math.round(rasioSesudah * 100) / 100,
+            riwayatPembayaran: {
+                totalPembayaran,
+                telat: latePayments,
+                persentaseTelat: Math.round(delinquency * 100) / 100,
+            },
+            biChecking: {
+                statusBI: biChecking.statusBI,
+                totalPinjamanAktif: biChecking.totalPinjamanAktif,
+                pernahMacet: biChecking.pernahMacet,
+            },
+            peminjamanEksternal: nasabah.peminjamanEksternal.length,
+            status,
+            reasons: reasons.length > 0 ? reasons : ['Semua kriteria terpenuhi'],
+            recommendation: status === 'APPROVED' ? 'Direkomendasikan untuk persetujuan' : status === 'REVIEW' ? 'Perlu review lebih lanjut' : 'Tidak direkomendasikan',
+        };
+    }
+
+    /**
      * Get full risk analysis for a nasabah
      */
     async getRiskAnalysis(nasabahId: number) {
@@ -384,6 +491,162 @@ export class RisikoAnalisisService {
     }
 
     /**
+     * Analyze loan frequency pattern (berapa kali pinjam dalam periode tertentu)
+     */
+    async analyzeLoanFrequency(nasabahId: number, periodMonths: number = 3) {
+        const nasabah = await this.prisma.nasabah.findUnique({
+            where: { id: nasabahId },
+            include: { pinjaman: true },
+        });
+
+        if (!nasabah) throw new NotFoundException('Nasabah tidak ditemukan');
+
+        const cutoffDate = new Date();
+        cutoffDate.setMonth(cutoffDate.getMonth() - periodMonths);
+
+        const loansInPeriod = nasabah.pinjaman.filter((p) => new Date(p.createdAt) > cutoffDate);
+        const averageLoansPerMonth = loansInPeriod.length / periodMonths;
+
+        return {
+            nasabahId,
+            period: `${periodMonths} bulan terakhir`,
+            totalLoans: loansInPeriod.length,
+            averageLoansPerMonth: Math.round(averageLoansPerMonth * 100) / 100,
+            riskLevel: averageLoansPerMonth >= 2 ? 'TINGGI' : averageLoansPerMonth >= 1 ? 'SEDANG' : 'RENDAH',
+            loansDetail: loansInPeriod.map((l) => ({
+                id: l.id,
+                amount: l.jumlahPinjaman,
+                tenor: l.tenor,
+                createdAt: l.createdAt,
+            })),
+        };
+    }
+
+    /**
+     * Analyze delinquency pattern (pola keterlambatan pembayaran)
+     */
+    async analyzeDelinquencyPattern(nasabahId: number) {
+        const nasabah = await this.prisma.nasabah.findUnique({
+            where: { id: nasabahId },
+            include: {
+                pinjaman: {
+                    include: {
+                        pembayaran: {
+                            orderBy: { createdAt: 'asc' },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!nasabah) throw new NotFoundException('Nasabah tidak ditemukan');
+
+        let totalPayments = 0;
+        let latePayments = 0;
+        let consecutiveLateDays: number[] = [];
+        let currentStreak = 0;
+        const delinquencyMonths: string[] = [];
+
+        for (const pinjaman of nasabah.pinjaman) {
+            for (const pembayaran of pinjaman.pembayaran) {
+                totalPayments++;
+
+                if (pembayaran.statusBayar === 'telat') {
+                    latePayments++;
+                    currentStreak++;
+
+                    if (pembayaran.dariTanggalSeharusnya) {
+                        const daysLate = Math.floor(
+                            (new Date(pembayaran.tanggalBayar).getTime() -
+                                new Date(pembayaran.dariTanggalSeharusnya).getTime()) /
+                            (1000 * 60 * 60 * 24),
+                        );
+                        consecutiveLateDays.push(daysLate);
+                        delinquencyMonths.push(new Date(pembayaran.tanggalBayar).toISOString().slice(0, 7));
+                    }
+                } else {
+                    if (currentStreak > 0) {
+                        currentStreak = 0;
+                    }
+                }
+            }
+        }
+
+        const maxConsecutiveLate = Math.max(...consecutiveLateDays, 0);
+        const avgDaysLate = consecutiveLateDays.length > 0
+            ? Math.round((consecutiveLateDays.reduce((a, b) => a + b, 0) / consecutiveLateDays.length) * 100) / 100
+            : 0;
+
+        return {
+            nasabahId,
+            totalPayments,
+            latePayments,
+            persentaseLate: Math.round((latePayments / totalPayments) * 100 * 100) / 100,
+            maxConsecutiveLateDays: maxConsecutiveLate,
+            averageDaysLate: avgDaysLate,
+            delinquencyMonths: [...new Set(delinquencyMonths)],
+            riskLevel: maxConsecutiveLate > 30 ? 'TINGGI' : maxConsecutiveLate > 10 ? 'SEDANG' : 'RENDAH',
+        };
+    }
+
+    /**
+     * Calculate comprehensive behavior risk score
+     */
+    async calculateBehaviorRiskScore(nasabahId: number): Promise<number> {
+        let behaviorScore = 0;
+
+        try {
+            // Loan frequency (max 30 points)
+            const frequency = await this.analyzeLoanFrequency(nasabahId, 3);
+            if (frequency.riskLevel === 'TINGGI') behaviorScore += 30;
+            else if (frequency.riskLevel === 'SEDANG') behaviorScore += 15;
+
+            // Delinquency pattern (max 40 points)
+            const delinquency = await this.analyzeDelinquencyPattern(nasabahId);
+            if (delinquency.riskLevel === 'TINGGI') behaviorScore += 40;
+            else if (delinquency.riskLevel === 'SEDANG') behaviorScore += 20;
+
+            // Risky behavior indicators (max 30 points)
+            const indicators = await this.detectRiskyBehavior(nasabahId);
+            if (indicators.length > 0) {
+                behaviorScore += Math.min(indicators.length * 10, 30);
+            }
+
+            return Math.min(behaviorScore, 100);
+        } catch {
+            return 0;
+        }
+    }
+
+    /**
+     * Get comprehensive behavior risk analysis
+     */
+    async getBehaviorRiskAnalysis(nasabahId: number) {
+        const frequency = await this.analyzeLoanFrequency(nasabahId, 3);
+        const delinquency = await this.analyzeDelinquencyPattern(nasabahId);
+        const indicators = await this.detectRiskyBehavior(nasabahId);
+        const behaviorScore = await this.calculateBehaviorRiskScore(nasabahId);
+
+        const overallRisk =
+            behaviorScore > 70 ? 'TINGGI' : behaviorScore > 40 ? 'SEDANG' : 'RENDAH';
+
+        return {
+            nasabahId,
+            behaviorRiskScore: behaviorScore,
+            overallRiskLevel: overallRisk,
+            loanFrequency: frequency,
+            delinquencyPattern: delinquency,
+            riskIndicators: indicators,
+            recommendation:
+                overallRisk === 'TINGGI'
+                    ? 'Nasabah menunjukkan pola berisiko tinggi. Pertimbangkan untuk menolak atau melakukan review mendalam.'
+                    : overallRisk === 'SEDANG'
+                        ? 'Nasabah menunjukkan beberapa indikasi perilaku berisiko. Lakukan monitoring lebih ketat.'
+                        : 'Perilaku nasabah tergolong normal.',
+        };
+    }
+
+    /**
      * Create or update BI checking data
      */
     async updateBIChecking(
@@ -454,6 +717,138 @@ export class RisikoAnalisisService {
                         : 0,
             },
             kategoriRisiko: kategoriCount,
+        };
+    }
+
+    /**
+     * Get detailed dashboard with all analytics
+     */
+    async getDetailedDashboardData() {
+        const overview = await this.getDashboardData();
+
+        // Get top risk customers
+        const topRiskCustomers = await this.prisma.risikoNasabah.findMany({
+            where: { kategoriRisiko: 'tinggi' },
+            orderBy: { skorRisiko: 'desc' },
+            take: 5,
+            include: { nasabah: { select: { id: true, nama: true, pekerjaan: true } } },
+        });
+
+        // Get nasabah by job type
+        const nasabahByJob = await this.prisma.nasabah.groupBy({
+            by: ['pekerjaan'],
+            _count: true,
+        });
+
+        // Get active vs completed loans
+        const loansStatus = await this.prisma.pinjaman.groupBy({
+            by: ['status'],
+            _count: true,
+        });
+
+        return {
+            overview,
+            topRiskCustomers: topRiskCustomers.map((r) => ({
+                nasabahId: r.nasabahId,
+                nama: r.nasabah.nama,
+                pekerjaan: r.nasabah.pekerjaan,
+                skorRisiko: r.skorRisiko,
+                kategoriRisiko: r.kategoriRisiko,
+                rekomendasi: r.rekomendasi,
+            })),
+            nasabahByJob,
+            loansStatus,
+        };
+    }
+
+    /**
+     * Get jobs analysis dashboard
+     */
+    async getJobsAnalysisDashboard() {
+        const jobs = await this.prisma.nasabah.findMany({
+            distinct: ['pekerjaan'],
+            select: { pekerjaan: true },
+        });
+
+        const jobsAnalysis: any[] = [];
+
+        for (const job of jobs) {
+            const nasabahList = await this.prisma.nasabah.findMany({
+                where: { pekerjaan: job.pekerjaan },
+                include: {
+                    pinjaman: {
+                        include: { pembayaran: true },
+                    },
+                    risikoNasabah: true,
+                },
+            });
+
+            let totalNasabah = 0;
+            let nasabahTelat = 0;
+            let nasabahLancar = 0;
+            let risikoTinggi = 0;
+            let totalPenghasilan = 0;
+
+            for (const nasabah of nasabahList) {
+                totalNasabah++;
+                totalPenghasilan += nasabah.penghasilan;
+
+                const delinquency = await this.pembayaranService.getDelinquencyPercentage(nasabah.id);
+                if (delinquency > 0) nasabahTelat++;
+                else nasabahLancar++;
+
+                if (nasabah.risikoNasabah?.kategoriRisiko === 'tinggi') risikoTinggi++;
+            }
+
+            jobsAnalysis.push({
+                pekerjaan: job.pekerjaan,
+                totalNasabah,
+                nasabahTelat,
+                nasabahLancar,
+                rataRataPenghasilan: Math.round(totalPenghasilan / totalNasabah),
+                persentaseKeterlambatan: totalNasabah > 0 ? Math.round((nasabahTelat / totalNasabah) * 100 * 100) / 100 : 0,
+                risikoTinggi,
+            });
+        }
+
+        return {
+            totalJenisJob: jobsAnalysis.length,
+            jobsAnalysis: jobsAnalysis.sort((a, b) => b.persentaseKeterlambatan - a.persentaseKeterlambatan),
+        };
+    }
+
+    /**
+     * Get risk summary
+     */
+    async getRiskSummary() {
+        const risikoNasabah = await this.prisma.risikoNasabah.findMany();
+        const nasabahList = await this.prisma.nasabah.findMany({
+            include: { pinjaman: true, peminjamanEksternal: true },
+        });
+
+        const rendah = risikoNasabah.filter((r) => r.kategoriRisiko === 'rendah').length;
+        const sedang = risikoNasabah.filter((r) => r.kategoriRisiko === 'sedang').length;
+        const tinggi = risikoNasabah.filter((r) => r.kategoriRisiko === 'tinggi').length;
+
+        const nasabahDenganEksternal = nasabahList.filter((n) => n.peminjamanEksternal.length > 0).length;
+        const nasabahMultiPinjam = nasabahList.filter((n) => n.pinjaman.filter((p) => p.status === 'active').length > 1).length;
+
+        return {
+            kategoriRisiko: {
+                rendah,
+                sedang,
+                tinggi,
+                total: rendah + sedang + tinggi,
+            },
+            persentaseRisiko: {
+                rendah: Math.round((rendah / (rendah + sedang + tinggi)) * 100 * 100) / 100,
+                sedang: Math.round((sedang / (rendah + sedang + tinggi)) * 100 * 100) / 100,
+                tinggi: Math.round((tinggi / (rendah + sedang + tinggi)) * 100 * 100) / 100,
+            },
+            analisisLanjut: {
+                nasabahDenganPinjamanEksternal: nasabahDenganEksternal,
+                nasabahDenganMultiPinjamAktif: nasabahMultiPinjam,
+            },
         };
     }
 }

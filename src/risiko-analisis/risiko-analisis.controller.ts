@@ -26,6 +26,33 @@ export class RisikoAnalisisController {
         return this.risikoAnalisisService.getRiskAnalysis(nasabahId);
     }
 
+    @Post('pre-loan-checking/:nasabahId')
+    preLoadChecking(
+        @Param('nasabahId', ParseIntPipe) nasabahId: number,
+        @Body() body: { proposedLoanAmount: number; proposedTenor?: number },
+    ) {
+        return this.risikoAnalisisService.preLoadChecking(
+            nasabahId,
+            body.proposedLoanAmount,
+            body.proposedTenor || 12,
+        );
+    }
+
+    @Get('behavior-risk/:nasabahId')
+    getBehaviorRiskAnalysis(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
+        return this.risikoAnalisisService.getBehaviorRiskAnalysis(nasabahId);
+    }
+
+    @Get('loan-frequency/:nasabahId')
+    analyzeLoanFrequency(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
+        return this.risikoAnalisisService.analyzeLoanFrequency(nasabahId, 3);
+    }
+
+    @Get('delinquency-pattern/:nasabahId')
+    analyzeDelinquencyPattern(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
+        return this.risikoAnalisisService.analyzeDelinquencyPattern(nasabahId);
+    }
+
     @Get('pekerjaan/:pekerjaan')
     getAnalysisByPekerjaan(@Param('pekerjaan') pekerjaan: string) {
         return this.risikoAnalisisService.getAnalysisByPekerjaan(pekerjaan);
@@ -50,5 +77,20 @@ export class RisikoAnalisisController {
     @Get('dashboard/overview')
     getDashboardData() {
         return this.risikoAnalisisService.getDashboardData();
+    }
+
+    @Get('dashboard/detailed')
+    async getDetailedDashboard() {
+        return this.risikoAnalisisService.getDetailedDashboardData();
+    }
+
+    @Get('dashboard/jobs-analysis')
+    async getJobsAnalysisDashboard() {
+        return this.risikoAnalisisService.getJobsAnalysisDashboard();
+    }
+
+    @Get('dashboard/risk-summary')
+    async getRiskSummary() {
+        return this.risikoAnalisisService.getRiskSummary();
     }
 }
