@@ -22,15 +22,23 @@ model Admin {
 
 // Model Nasabah (Customer)
 model Nasabah {
-  id                  Int      @id @default(autoincrement())
-  nama                String
-  nik                 String   @unique
-  pekerjaan           String // PNS, Freelance, Petani, dll
-  penghasilan         Float // Penghasilan per bulan
-  saldoRataRata       Float? // Optional - average balance
-  estimasiPengeluaran Float? // Estimated expenses
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                     Int       @id @default(autoincrement())
+  nama                   String
+  nik                    String    @unique
+  tanggalLahir           DateTime? // Tanggal lahir nasabah
+  pekerjaan              String // PNS, Freelance, Petani, dll
+  penghasilan            Float // Penghasilan per bulan
+  alamat                 String? // Alamat nasabah
+  noHp                   String? // Nomor HP nasabah
+  email                  String? // Email nasabah
+  noRek                  String? // Nomor rekening nasabah
+  namaIbuKandung         String? // Nama ibu kandung
+  alamatIbuKandung       String? // Alamat ibu kandung
+  tanggalLahirIbuKandung DateTime? // Tanggal lahir ibu kandung
+  saldoRataRata          Float? // Optional - average balance
+  estimasiPengeluaran    Float? // Estimated expenses
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   pinjaman            Pinjaman[]
   simpanan            Simpanan[]
