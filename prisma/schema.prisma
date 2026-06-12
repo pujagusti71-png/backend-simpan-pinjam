@@ -1,6 +1,5 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -9,187 +8,187 @@ generator client {
 
 // Model Admin (Administrator)
 model Admin {
-  id                    Int       @id @default(autoincrement())
-  username              String    @unique
-  password              String    // hashed password
-  email                 String    @unique
-  namaLengkap           String
-  isActive              Boolean   @default(true)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  password    String // hashed password
+  email       String   @unique
+  namaLengkap String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("Admin")
 }
 
 // Model Nasabah (Customer)
 model Nasabah {
-  id                    Int       @id @default(autoincrement())
-  nama                  String
-  nik                   String    @unique
-  pekerjaan             String    // PNS, Freelance, Petani, dll
-  penghasilan           Float     // Penghasilan per bulan
-  saldoRataRata         Float?    // Optional - average balance
-  estimasiPengeluaran   Float?    // Estimated expenses
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  pinjaman              Pinjaman[]
-  simpanan              Simpanan[]
-  riwayatKredit         RiwayatKredit[]
-  peminjamanEksternal   PeminjamanEksternal[]
-  risikoNasabah         RisikoNasabah?
+  id                  Int      @id @default(autoincrement())
+  nama                String
+  nik                 String   @unique
+  pekerjaan           String // PNS, Freelance, Petani, dll
+  penghasilan         Float // Penghasilan per bulan
+  saldoRataRata       Float? // Optional - average balance
+  estimasiPengeluaran Float? // Estimated expenses
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  pinjaman            Pinjaman[]
+  simpanan            Simpanan[]
+  riwayatKredit       RiwayatKredit[]
+  peminjamanEksternal PeminjamanEksternal[]
+  risikoNasabah       RisikoNasabah?
 
   @@map("Nasabah")
 }
 
 // Model Simpanan (Savings)
 model Simpanan {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
-  
-  jumlahSetoran         Float     // Savings amount per transaction
-  bungaSimpanan         Float?    // Interest rate (%) if applicable
-  jenisInterest         String?   // "flat" or "efektif"
-  tanggalSetoran        DateTime  @default(now())
-  saldoAkhir            Float     // Final balance after transaction
-  status                String    @default("aktif") // "aktif", "ditarik", "ditunda"
-  keterangan            String?   // Optional notes
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  transaksiBunga        TransaksiBunga[]
+  id        Int     @id @default(autoincrement())
+  nasabahId Int
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+
+  jumlahSetoran  Float // Savings amount per transaction
+  bungaSimpanan  Float? // Interest rate (%) if applicable
+  jenisInterest  String? // "flat" or "efektif"
+  tanggalSetoran DateTime @default(now())
+  saldoAkhir     Float // Final balance after transaction
+  status         String   @default("aktif") // "aktif", "ditarik", "ditunda"
+  keterangan     String? // Optional notes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transaksiBunga TransaksiBunga[]
 
   @@map("Simpanan")
 }
 
 // Model Transaksi Bunga (Interest Transactions)
 model TransaksiBunga {
-  id                    Int       @id @default(autoincrement())
-  simpananId            Int
-  simpanan              Simpanan  @relation(fields: [simpananId], references: [id], onDelete: Cascade)
-  
-  nominalBunga          Float     // Interest amount
-  tanggalTransaksi      DateTime  @default(now())
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id         Int      @id @default(autoincrement())
+  simpananId Int
+  simpanan   Simpanan @relation(fields: [simpananId], references: [id], onDelete: Cascade)
+
+  nominalBunga     Float // Interest amount
+  tanggalTransaksi DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("TransaksiBunga")
 }
 
 // Model Pinjaman (Loan)
 model Pinjaman {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
-  
-  jumlahPinjaman        Float     // Loan amount
-  tenor                 Int       // Loan duration in months
-  sukuBunga             Float     // Interest rate (%)
-  jenisBunga            String    // "flat" or "efektif"
-  
-  tanggalPengajuan      DateTime  @default(now())
-  tanggalAsetujuan      DateTime?
-  tanggalSelesai        DateTime?
-  
-  status                String    @default("pending") // pending, approved, active, completed, rejected
-  
-  cicilanBulanan        Float?    // Monthly installment (calculated)
-  totalBunga            Float?    // Total interest (calculated)
-  totalPembayaran       Float?    // Total payment (calculated)
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  pembayaran            Pembayaran[]
+  id        Int     @id @default(autoincrement())
+  nasabahId Int
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+
+  jumlahPinjaman Float // Loan amount
+  tenor          Int // Loan duration in months
+  sukuBunga      Float // Interest rate (%)
+  jenisBunga     String // "flat" or "efektif"
+
+  tanggalPengajuan DateTime  @default(now())
+  tanggalAsetujuan DateTime?
+  tanggalSelesai   DateTime?
+
+  status String @default("pending") // pending, approved, active, completed, rejected
+
+  cicilanBulanan  Float? // Monthly installment (calculated)
+  totalBunga      Float? // Total interest (calculated)
+  totalPembayaran Float? // Total payment (calculated)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pembayaran Pembayaran[]
 
   @@map("Pinjaman")
 }
 
 // Model Pembayaran (Payment)
 model Pembayaran {
-  id                    Int       @id @default(autoincrement())
-  pinjamanId            Int
-  pinjaman              Pinjaman  @relation(fields: [pinjamanId], references: [id], onDelete: Cascade)
-  
+  id         Int      @id @default(autoincrement())
+  pinjamanId Int
+  pinjaman   Pinjaman @relation(fields: [pinjamanId], references: [id], onDelete: Cascade)
+
   jumlahBayar           Float
   tanggalBayar          DateTime  @default(now())
-  statusBayar           String    // "lancar" or "telat"
+  statusBayar           String // "lancar" or "telat"
   dariTanggalSeharusnya DateTime? // Expected payment date
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Model Riwayat Kredit (Credit History)
 model RiwayatKredit {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
-  
-  totalPinjamanAktif    Int       // Number of active loans
-  statusBI              String    // "aman" or "bermasalah"
-  kolektibilitas        String    // Collectibility status
-  pernahMacet           Boolean   @default(false)
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id        Int     @id @default(autoincrement())
+  nasabahId Int
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+
+  totalPinjamanAktif Int // Number of active loans
+  statusBI           String // "aman" or "bermasalah"
+  kolektibilitas     String // Collectibility status
+  pernahMacet        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Model Pinjaman Eksternal (External Loans)
 model PeminjamanEksternal {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
-  
-  jumlahPinjaman        Float
-  kolektibilitas        String    // Status of external loan
-  sumberPinjaman        String    // Source of loan (e.g., bank name)
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id        Int     @id @default(autoincrement())
+  nasabahId Int
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+
+  jumlahPinjaman Float
+  kolektibilitas String // Status of external loan
+  sumberPinjaman String // Source of loan (e.g., bank name)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Model Risiko Nasabah (Customer Risk Profile)
 model RisikoNasabah {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int       @unique
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
-  
-  rasioSiklusPersentase Float?    // Installment to income ratio (%)
-  skorRisiko            Int       // Risk score (0-100)
-  kategoriRisiko        String    // "rendah", "sedang", "tinggi"
-  
-  persentaseKeterlambatan Float?  // Delinquency percentage
-  frekuensiPinjaman     Int?      // Loan frequency
-  penjumlahPeminjamanAktif Int?   // Total active loans
-  
+  id        Int     @id @default(autoincrement())
+  nasabahId Int     @unique
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+
+  rasioSiklusPersentase Float? // Installment to income ratio (%)
+  skorRisiko            Int // Risk score (0-100)
+  kategoriRisiko        String // "rendah", "sedang", "tinggi"
+
+  persentaseKeterlambatan  Float? // Delinquency percentage
+  frekuensiPinjaman        Int? // Loan frequency
+  penjumlahPeminjamanAktif Int? // Total active loans
+
   indikasiBehaviorBerisiko String? // Risky behavior indicators
-  rekomendasi           String    // "approve", "review", "reject"
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  rekomendasi              String // "approve", "review", "reject"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Model untuk Laporan Analisis per Jenis Pekerjaan
 model AnalisisPerPekerjaan {
-  id                    Int       @id @default(autoincrement())
-  pekerjaan             String    @unique
-  
-  totalNasabah          Int
-  nasabahTelat          Int
-  nasabahLancar         Int
-  
+  id        Int    @id @default(autoincrement())
+  pekerjaan String @unique
+
+  totalNasabah  Int
+  nasabahTelat  Int
+  nasabahLancar Int
+
   persentaseKeterlambatan Float
-  rataRataPenghasilan   Float
-  rataRataRasioCikilan  Float
-  
-  tingkatRisiko         String    // "tinggi", "sedang", "rendah"
-  
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  rataRataPenghasilan     Float
+  rataRataRasioCikilan    Float
+
+  tingkatRisiko String // "tinggi", "sedang", "rendah"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("AnalisisPerPekerjaan")
 }
