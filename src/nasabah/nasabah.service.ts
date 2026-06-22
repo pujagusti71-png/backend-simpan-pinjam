@@ -77,7 +77,16 @@ export class NasabahService {
 
     async findAll() {
         return await this.prisma.nasabah.findMany({
-            include: {
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
                 pinjaman: true,
                 risikoNasabah: true,
                 riwayatKredit: true,
@@ -88,7 +97,16 @@ export class NasabahService {
     async findOne(id: number) {
         return await this.prisma.nasabah.findUnique({
             where: { id },
-            include: {
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
                 pinjaman: true,
                 riwayatKredit: true,
                 peminjamanEksternal: true,
@@ -100,7 +118,16 @@ export class NasabahService {
     async findByNIK(nik: string) {
         return await this.prisma.nasabah.findUnique({
             where: { nik },
-            include: {
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
                 pinjaman: true,
                 risikoNasabah: true,
                 riwayatKredit: true,
@@ -114,6 +141,8 @@ export class NasabahService {
         if (updateNasabahDto.nama !== undefined) updateData.nama = updateNasabahDto.nama;
         if (updateNasabahDto.pekerjaan !== undefined) updateData.pekerjaan = updateNasabahDto.pekerjaan;
         if (updateNasabahDto.penghasilan !== undefined) updateData.penghasilan = updateNasabahDto.penghasilan;
+        if (updateNasabahDto.riwayatPembayaran !== undefined) updateData.riwayatPembayaran = updateNasabahDto.riwayatPembayaran;
+        if (updateNasabahDto.jumlahTanggungan !== undefined) updateData.jumlahTanggungan = updateNasabahDto.jumlahTanggungan;
         if (updateNasabahDto.saldoRataRata !== undefined) updateData.saldoRataRata = updateNasabahDto.saldoRataRata;
         if (updateNasabahDto.estimasiPengeluaran !== undefined) updateData.estimasiPengeluaran = updateNasabahDto.estimasiPengeluaran;
 
@@ -132,6 +161,17 @@ export class NasabahService {
     async getAllByPekerjaan(pekerjaan: string) {
         return await this.prisma.nasabah.findMany({
             where: { pekerjaan },
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
     }
 }

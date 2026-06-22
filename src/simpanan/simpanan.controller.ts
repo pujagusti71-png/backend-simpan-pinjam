@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/guards';
 
 @Controller('simpanan')
 @ApiTags('Simpanan')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT')
 @UseGuards(JwtAuthGuard)
 export class SimpananController {
     constructor(private readonly simpananService: SimpananService) { }

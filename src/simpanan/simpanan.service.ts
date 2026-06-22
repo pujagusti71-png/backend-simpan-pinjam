@@ -48,6 +48,17 @@ export class SimpananService {
     async create(createSimpananDto: CreateSimpananDto) {
         const nasabah = await this.prisma.nasabah.findUnique({
             where: { id: createSimpananDto.nasabahId },
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         if (!nasabah) {
@@ -200,6 +211,17 @@ export class SimpananService {
     async getSimpananSummary(nasabahId: number) {
         const nasabah = await this.prisma.nasabah.findUnique({
             where: { id: nasabahId },
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         if (!nasabah) {

@@ -12,6 +12,7 @@ import { ApiTags, ApiBody, ApiOperation, ApiResponse, ApiBearerAuth } from '@nes
 import { PinjamanService } from './pinjaman.service';
 import { CreatePinjamanDto } from './dto/create-pinjaman.dto';
 import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
+import { PinjamanResponseDto } from './dto/pinjaman-response.dto';
 
 @ApiTags('pinjaman')
 @ApiBearerAuth('JWT')
@@ -28,16 +29,19 @@ export class PinjamanController {
     }
 
     @Get()
+    @ApiResponse({ status: 200, description: 'Daftar pinjaman', type: [PinjamanResponseDto] })
     findAll() {
         return this.pinjamanService.findAll();
     }
 
     @Get(':id')
+    @ApiResponse({ status: 200, description: 'Detail pinjaman', type: PinjamanResponseDto })
     findOne(@Param('id', ParseIntPipe) id: number) {
         return this.pinjamanService.findOne(id);
     }
 
     @Get('nasabah/:nasabahId')
+    @ApiResponse({ status: 200, description: 'Pinjaman berdasarkan nasabah', type: [PinjamanResponseDto] })
     findByNasabah(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
         return this.pinjamanService.findByNasabah(nasabahId);
     }
@@ -56,6 +60,7 @@ export class PinjamanController {
     }
 
     @Get('active/:nasabahId')
+    @ApiResponse({ status: 200, description: 'Pinjaman aktif nasabah', type: [PinjamanResponseDto] })
     getActiveLoan(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
         return this.pinjamanService.getActiveLoan(nasabahId);
     }

@@ -70,6 +70,17 @@ export class AuthService {
     async validateNasabah(id: number) {
         const nasabah = await this.prisma.nasabah.findUnique({
             where: { id },
+            select: {
+                id: true,
+                nama: true,
+                nik: true,
+                pekerjaan: true,
+                penghasilan: true,
+                saldoRataRata: true,
+                estimasiPengeluaran: true,
+                createdAt: true,
+                updatedAt: true,
+            },
         });
 
         if (!nasabah) {

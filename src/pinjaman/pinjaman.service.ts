@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePinjamanDto } from './dto/create-pinjaman.dto';
 import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
@@ -55,40 +55,84 @@ export class PinjamanService {
             jenisBunga,
         );
 
-        return await this.prisma.pinjaman.create({
-            data: {
-                ...createPinjamanDto,
-                ...calculations,
-            },
-        });
+        try {
+            return await this.prisma.pinjaman.create({
+                data: {
+                    ...createPinjamanDto,
+                    ...calculations,
+                },
+            });
+        } catch (error) {
+            console.error('PinjamanService.create error:', error);
+            throw new InternalServerErrorException('Gagal membuat pinjaman');
+        }
     }
 
     async findAll() {
-        return await this.prisma.pinjaman.findMany({
-            include: {
-                nasabah: true,
-                pembayaran: true,
-            },
-        });
+        try {
+            return await this.prisma.pinjaman.findMany({
+                include: {
+                    nasabah: {
+                        select: {
+                            id: true,
+                            nama: true,
+                            nik: true,
+                            pekerjaan: true,
+                            penghasilan: true,
+                            saldoRataRata: true,
+                            estimasiPengeluaran: true,
+                            createdAt: true,
+                            updatedAt: true,
+                        },
+                    },
+                    pembayaran: true,
+                },
+            });
+        } catch (error) {
+            console.error('PinjamanService.findAll error:', error);
+            throw new InternalServerErrorException('Gagal mengambil daftar pinjaman');
+        }
     }
 
     async findOne(id: number) {
-        return await this.prisma.pinjaman.findUnique({
-            where: { id },
-            include: {
-                nasabah: true,
-                pembayaran: true,
-            },
-        });
+        try {
+            return await this.prisma.pinjaman.findUnique({
+                where: { id },
+                include: {
+                    nasabah: {
+                        select: {
+                            id: true,
+                            nama: true,
+                            nik: true,
+                            pekerjaan: true,
+                            penghasilan: true,
+                            saldoRataRata: true,
+                            estimasiPengeluaran: true,
+                            createdAt: true,
+                            updatedAt: true,
+                        },
+                    },
+                    pembayaran: true,
+                },
+            });
+        } catch (error) {
+            console.error('PinjamanService.findOne error:', error);
+            throw new InternalServerErrorException('Gagal mengambil data pinjaman');
+        }
     }
 
     async findByNasabah(nasabahId: number) {
-        return await this.prisma.pinjaman.findMany({
-            where: { nasabahId },
-            include: {
-                pembayaran: true,
-            },
-        });
+        try {
+            return await this.prisma.pinjaman.findMany({
+                where: { nasabahId },
+                include: {
+                    pembayaran: true,
+                },
+            });
+        } catch (error) {
+            console.error('PinjamanService.findByNasabah error:', error);
+            throw new InternalServerErrorException('Gagal mengambil pinjaman nasabah');
+        }
     }
 
     async update(id: number, updatePinjamanDto: UpdatePinjamanDto) {

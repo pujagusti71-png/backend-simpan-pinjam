@@ -34,7 +34,11 @@ export class AnalisisPekerjaanService {
             // Get all nasabah with this job type
             const nasabahPekerjaan = await this.prisma.nasabah.findMany({
                 where: { pekerjaan },
-                include: {
+                select: {
+                    id: true,
+                    nama: true,
+                    pekerjaan: true,
+                    penghasilan: true,
                     pinjaman: {
                         include: {
                             pembayaran: true,
@@ -127,7 +131,11 @@ export class AnalisisPekerjaanService {
     async getStatistikPerPekerjaan(pekerjaan: string) {
         const nasabahPekerjaan = await this.prisma.nasabah.findMany({
             where: { pekerjaan },
-            include: {
+            select: {
+                id: true,
+                nama: true,
+                pekerjaan: true,
+                penghasilan: true,
                 pinjaman: {
                     include: {
                         pembayaran: true,
