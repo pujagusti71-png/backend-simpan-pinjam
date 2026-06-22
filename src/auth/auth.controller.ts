@@ -46,11 +46,10 @@ export class AuthController {
     async login(@Body() loginDto: LoginDto) {
         try {
             return await this.authService.login(loginDto);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Login gagal',
-                HttpStatus.UNAUTHORIZED,
-            );
+        } catch (error: unknown) {
+            const message =
+                error instanceof Error ? error.message : 'Login gagal';
+            throw new HttpException(message, HttpStatus.UNAUTHORIZED);
         }
     }
 
