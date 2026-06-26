@@ -29,6 +29,8 @@ model Nasabah {
   penghasilan         Float // Penghasilan per bulan
   saldoRataRata       Float? // Optional - average balance
   estimasiPengeluaran Float? // Estimated expenses
+  riwayatPembayaran   String? // Payment history: telat / lancar
+  jumlahTanggungan    Int? // Number of dependents
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

@@ -21,4 +21,10 @@ export class CreateNasabahDto {
 
     @ApiProperty({ required: false, example: 1500000 })
     estimasiPengeluaran?: number;
+
+    @ApiProperty({ required: false, example: 'lancar' })
+    riwayatPembayaran?: string;
+
+    @ApiProperty({ required: false, example: 2 })
+    jumlahTanggungan?: number;
 }

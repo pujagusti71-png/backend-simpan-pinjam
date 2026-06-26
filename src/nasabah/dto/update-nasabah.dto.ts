@@ -5,4 +5,6 @@ export class UpdateNasabahDto {
     penghasilan?: number;
     saldoRataRata?: number;
     estimasiPengeluaran?: number;
+    riwayatPembayaran?: string;
+    jumlahTanggungan?: number;
 }
