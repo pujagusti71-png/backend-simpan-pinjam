@@ -10,13 +10,22 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     canActivate(context: ExecutionContext) {
+        const request = context.switchToHttp().getRequest();
+        console.log('[JWT Guard] Request:', request.method, request.path);
+
         const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
             context.getHandler(),
             context.getClass(),
         ]);
+
+        console.log('[JWT Guard] isPublic:', isPublic);
+
         if (isPublic) {
+            console.log('[JWT Guard] Route is public, skipping auth');
             return true;
         }
+
+        console.log('[JWT Guard] Checking JWT token...');
         return super.canActivate(context);
     }
 }

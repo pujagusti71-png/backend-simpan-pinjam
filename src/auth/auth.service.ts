@@ -12,10 +12,28 @@ export class AuthService {
     ) { }
 
     async login(loginDto: LoginDto) {
+        console.log('[AuthService] login() called');
+        console.log('[AuthService] loginDto:', loginDto);
+        console.log('[AuthService] typeof loginDto:', typeof loginDto);
+
         try {
+            console.log('[AuthService] About to call prisma.admin.findUnique...');
+
             const admin = await this.prisma.admin.findUnique({
                 where: { username: loginDto.username },
             });
+
+            console.log('=== LOGIN DEBUG ===');
+            console.log('Username:', loginDto.username);
+            console.log('Admin found:', !!admin);
+            if (admin) {
+                console.log('Admin data:', {
+                    id: admin.id,
+                    username: admin.username,
+                    passwordLength: admin.password.length,
+                    isActive: admin.isActive,
+                });
+            }
 
             if (!admin) {
                 throw new UnauthorizedException('Username atau password salah');
@@ -25,6 +43,12 @@ export class AuthService {
                 loginDto.password,
                 admin.password,
             );
+
+            console.log('Password valid:', isPasswordValid);
+            console.log('Password comparison:', {
+                inputPassword: loginDto.password,
+                storedPasswordHash: admin.password.substring(0, 20) + '...',
+            });
 
             if (!isPasswordValid) {
                 throw new UnauthorizedException('Username atau password salah');
@@ -47,6 +71,11 @@ export class AuthService {
                 },
             };
         } catch (error) {
+            console.log('[AuthService] Caught error:', error);
+            console.log('[AuthService] Error message:', error.message);
+            console.log('[AuthService] Error type:', error.constructor.name);
+            console.log('[AuthService] Error stack:', error.stack);
+
             if (error instanceof UnauthorizedException) {
                 throw error;
             }

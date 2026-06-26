@@ -44,11 +44,15 @@ export class AuthController {
         description: 'Username atau password salah',
     })
     async login(@Body() loginDto: LoginDto) {
+        console.log('[AuthController] login() called with username:', loginDto.username);
         try {
             return await this.authService.login(loginDto);
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : 'Login gagal';
+            if (error instanceof Error) {
+                console.log('[AuthController] login() error:', error.message);
+            }
             throw new HttpException(message, HttpStatus.UNAUTHORIZED);
         }
     }
