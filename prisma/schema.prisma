@@ -22,21 +22,22 @@ model Admin {
 
 // Model Nasabah (Customer)
 model Nasabah {
-  id                    Int       @id @default(autoincrement())
-  nama                  String
-  nik                   String    @unique
-  pekerjaan             String    // PNS, Freelance, Petani, dll
-  penghasilan           Float     // Penghasilan per bulan
-  saldoRataRata         Float?    // Optional - average balance
-  estimasiPengeluaran   Float?    // Estimated expenses
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  pinjaman              Pinjaman[]
-  simpanan              Simpanan[]
-  riwayatKredit         RiwayatKredit[]
-  peminjamanEksternal   PeminjamanEksternal[]
-  risikoNasabah         RisikoNasabah?
+  id                  Int      @id @default(autoincrement())
+  nama                String
+  nik                 String   @unique
+  pekerjaan           String // PNS, Freelance, Petani, dll
+  penghasilan         Float // Penghasilan per bulan
+  saldoRataRata       Float? // Optional - average balance
+  estimasiPengeluaran Float? // Estimated expenses
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  pinjaman            Pinjaman[]
+  simpanan            Simpanan[]
+  riwayatKredit       RiwayatKredit[]
+  peminjamanEksternal PeminjamanEksternal[]
+  risikoNasabah       RisikoNasabah?
+  analisisRisiko      AnalisisRisiko[]
 
   @@map("Nasabah")
 }
@@ -138,18 +139,20 @@ model RiwayatKredit {
 }
 
 model AnalisisRisiko {
-  id                    Int       @id @default(autoincrement())
-  nasabahId             Int
-  nasabah               Nasabah   @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
+  id        Int     @id @default(autoincrement())
+  nasabahId Int
+  nasabah   Nasabah @relation(fields: [nasabahId], references: [id], onDelete: Cascade)
 
-  skorPekerjaan         Int
-  skorPenghasilan       Int
-  skorLamaBekerja       Int
-  skorRiwayat           Int
-  skorTanggungan        Int
-  totalSkor             Float
-  status                String
-  createdAt             DateTime  @default(now())
+  skorPekerjaan   Int
+  skorPenghasilan Int
+  skorLamaBekerja Int
+  skorRiwayat     Int
+  skorTanggungan  Int
+  totalSkor       Float
+  status          String
+  createdAt       DateTime @default(now())
+
+  @@map("AnalisisRisiko")
 }
 
 // Model Pinjaman Eksternal (External Loans)
