@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto';
@@ -53,7 +53,12 @@ export class AuthController {
             if (error instanceof Error) {
                 console.log('[AuthController] login() error:', error.message);
             }
-            throw new HttpException(message, HttpStatus.UNAUTHORIZED);
+
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+
+            throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

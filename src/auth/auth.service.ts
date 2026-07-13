@@ -70,17 +70,21 @@ export class AuthService {
                     namaLengkap: admin.namaLengkap,
                 },
             };
-        } catch (error) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Unknown error';
+            const errorType = error instanceof Error ? error.constructor.name : 'Unknown';
+
             console.log('[AuthService] Caught error:', error);
-            console.log('[AuthService] Error message:', error.message);
-            console.log('[AuthService] Error type:', error.constructor.name);
-            console.log('[AuthService] Error stack:', error.stack);
+            console.log('[AuthService] Error message:', message);
+            console.log('[AuthService] Error type:', errorType);
+            console.log('[AuthService] Error stack:', error instanceof Error ? error.stack : 'No stack available');
 
             if (error instanceof UnauthorizedException) {
                 throw error;
             }
-            // Handle database/connection errors
-            throw new UnauthorizedException('Username atau password salah');
+
+            // Preserve non-auth errors so controller can return 500 instead of 401
+            throw new Error('Internal server error');
         }
     }
 
