@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePinjamanDto } from './dto/create-pinjaman.dto';
 import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
@@ -6,6 +6,66 @@ import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
 @Injectable()
 export class PinjamanService {
     constructor(private prisma: PrismaService) { }
+
+    private normalizePayload(createPinjamanDto: any) {
+        const payload = createPinjamanDto || {};
+
+        const nama = payload.nama || payload.name || payload.namaLengkap;
+        const nik = payload.nik || payload.NIK;
+        const email = payload.email || payload.emailAddress;
+        const penghasilan = Number(payload.penghasilan ?? payload.penghasilanBulanan ?? 0);
+        const cicilan = Number(payload.cicilan ?? payload.cicilanBulanan ?? 0);
+        const jumlah = Number(payload.jumlah ?? payload.jumlahPinjaman ?? 0);
+        const tenor = Number(payload.tenor ?? payload.tenorBulan ?? 0);
+        const bunga = Number(payload.bunga ?? payload.sukuBunga ?? 0);
+        const tujuan = payload.tujuan || payload.purpose || null;
+        const risiko = payload.risiko || payload.risk || 'Belum ditentukan';
+        const rekomendasi = payload.rekomendasi || payload.recommendation || 'Review';
+
+        if (!nama || !nik) {
+            throw new BadRequestException('Field nama dan nik wajib diisi');
+        }
+
+        if (!jumlah || !tenor) {
+            throw new BadRequestException('Field jumlah dan tenor wajib diisi');
+        }
+
+        return {
+            nama,
+            nik,
+            email,
+            penghasilan,
+            cicilan,
+            jumlah,
+            tenor,
+            bunga,
+            tujuan,
+            risiko,
+            rekomendasi,
+        };
+    }
+
+    private async ensureNasabah(payload: ReturnType<PinjamanService['normalizePayload']>) {
+        const existingNasabah = await this.prisma.nasabah.findUnique({
+            where: { nik: payload.nik },
+        });
+
+        if (existingNasabah) {
+            return existingNasabah.id;
+        }
+
+        const createdNasabah = await this.prisma.nasabah.create({
+            data: {
+                nama: payload.nama,
+                nik: payload.nik,
+                pekerjaan: payload.tujuan ? 'Tidak tercantum' : 'Tidak tercantum',
+                penghasilan: payload.penghasilan,
+                riwayatPembayaran: 'Belum ada data',
+            },
+        });
+
+        return createdNasabah.id;
+    }
 
     /**
      * Calculate monthly installment and total interest
@@ -46,24 +106,54 @@ export class PinjamanService {
     }
 
     async create(createPinjamanDto: CreatePinjamanDto) {
-        const { jumlahPinjaman, sukuBunga, tenor, jenisBunga } = createPinjamanDto;
-
-        const calculations = this.calculateInstallment(
-            jumlahPinjaman,
-            sukuBunga,
-            tenor,
-            jenisBunga,
-        );
-
         try {
-            return await this.prisma.pinjaman.create({
+            const payload = this.normalizePayload(createPinjamanDto);
+            const nasabahId = await this.ensureNasabah(payload);
+
+            const calculations = this.calculateInstallment(
+                payload.jumlah,
+                payload.bunga || 0,
+                payload.tenor,
+                'efektif',
+            );
+
+            const createdPinjaman = await this.prisma.pinjaman.create({
                 data: {
-                    ...createPinjamanDto,
-                    ...calculations,
+                    nasabahId,
+                    jumlahPinjaman: payload.jumlah,
+                    tenor: payload.tenor,
+                    sukuBunga: payload.bunga || 0,
+                    jenisBunga: 'efektif',
+                    status: 'pending',
+                    cicilanBulanan: calculations.cicilanBulanan,
+                    totalBunga: calculations.totalBunga,
+                    totalPembayaran: calculations.totalPembayaran,
                 },
             });
+
+            await this.prisma.risikoNasabah.create({
+                data: {
+                    nasabahId,
+                    skorRisiko: payload.risiko === 'Rendah' ? 20 : payload.risiko === 'Sedang' ? 50 : 80,
+                    kategoriRisiko: payload.risiko.toLowerCase(),
+                    rekomendasi: payload.rekomendasi,
+                },
+            }).catch(() => undefined);
+
+            return {
+                id: createdPinjaman.id,
+                nasabahId: createdPinjaman.nasabahId,
+                nama: payload.nama,
+                nik: payload.nik,
+                jumlahPinjaman: createdPinjaman.jumlahPinjaman,
+                tenor: createdPinjaman.tenor ?? payload.tenor,
+                createdAt: createdPinjaman.createdAt ?? new Date().toISOString(),
+            };
         } catch (error) {
             console.error('PinjamanService.create error:', error);
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
             throw new InternalServerErrorException('Gagal membuat pinjaman');
         }
     }
