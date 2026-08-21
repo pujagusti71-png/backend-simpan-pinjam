@@ -2,38 +2,38 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class StatistikPerPekerjaanResponseDto {
     @ApiProperty({ example: 'Guru' })
-    pekerjaan: string;
+    pekerjaan!: string;
 
     @ApiProperty({ example: 100 })
-    totalNasabah: number;
+    totalNasabah!: number;
 
     @ApiProperty({ example: 25 })
-    nasabahDenganPinjaman: number;
+    nasabahDenganPinjaman!: number;
 
     @ApiProperty({ example: 75 })
-    nasabahBelumPinjam: number;
+    nasabahBelumPinjam!: number;
 
     @ApiProperty({ example: 10 })
-    nasabahTelat: number;
+    nasabahTelat!: number;
 
     @ApiProperty({ example: 90 })
-    nasabahLancar: number;
+    nasabahLancar!: number;
 
     @ApiProperty({ example: 4500000 })
-    rataRataPenghasilan: number;
+    rataRataPenghasilan!: number;
 
     @ApiProperty({ example: 1250000 })
-    totalCicilanBulanan: number;
+    totalCicilanBulanan!: number;
 
     @ApiProperty({ example: 27.78 })
-    rataRataRasioCikilan: number;
+    rataRataRasioCikilan!: number;
 
     @ApiProperty({ example: 10 })
-    risikoTinggi: number;
+    risikoTinggi!: number;
 
     @ApiProperty({ example: 5 })
-    risikoSedang: number;
+    risikoSedang!: number;
 
     @ApiProperty({ example: 10 })
-    risikoRendah: number;
+    risikoRendah!: number;
 }

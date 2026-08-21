@@ -14,6 +14,8 @@ export class ListNasabahDto {
     tanggalLahirIbuKandung: Date | null;
     saldoRataRata: number | null;
     estimasiPengeluaran: number | null;
+    skorRisikoPekerjaan: number | null;
+    kategoriRisikoPekerjaan: string | null;
     createdAt: Date;
     updatedAt: Date;
 }

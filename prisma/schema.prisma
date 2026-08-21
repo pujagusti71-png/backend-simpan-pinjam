@@ -2,6 +2,7 @@ datasource db {
   provider = "postgresql"
 }
 
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,17 +21,34 @@ model Admin {
   @@map("Admin")
 }
 
+model AnalisisRisikoPekerjaan {
+  id              Int      @id @default(autoincrement())
+  pekerjaan       String   @unique
+  skorRisiko      Int      @map("skor_risiko")
+  kategoriRisiko  String   @map("kategori_risiko")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  nasabah         Nasabah[]
+
+  @@map("analisis_risiko_pekerjaan")
+}
+
 // Model Nasabah (Customer)
 model Nasabah {
   id                  Int      @id @default(autoincrement())
   nama                String
   nik                 String   @unique
+  tanggalLahir        DateTime?
   pekerjaan           String // PNS, Freelance, Petani, dll
   penghasilan         Float // Penghasilan per bulan
   saldoRataRata       Float? // Optional - average balance
   estimasiPengeluaran Float? // Estimated expenses
   riwayatPembayaran   String? // Payment history: telat / lancar
   jumlahTanggungan    Int? // Number of dependents
+  skorRisikoPekerjaan Int?
+  kategoriRisikoPekerjaan String?
+  analisisRisikoPekerjaanId Int?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -40,6 +58,7 @@ model Nasabah {
   peminjamanEksternal PeminjamanEksternal[]
   risikoNasabah       RisikoNasabah?
   analisisRisiko      AnalisisRisiko[]
+  analisisRisikoPekerjaan AnalisisRisikoPekerjaan? @relation(fields: [analisisRisikoPekerjaanId], references: [id], onDelete: SetNull)
 
   @@map("Nasabah")
 }

@@ -10,14 +10,8 @@ export class ListSimpananDto {
     @ApiProperty({ example: 100000 })
     jumlahSetoran: number;
 
-    @ApiPropertyOptional({ example: 1.5 })
-    bungaSimpanan?: number;
-
-    @ApiPropertyOptional({ example: 'flat' })
-    jenisInterest?: string;
-
-    @ApiProperty({ example: '2026-06-03T08:00:00.000Z' })
-    tanggalSetoran: Date;
+    @ApiProperty({ example: '2026-06-03T08:00:00' })
+    tanggalSetoran: string;
 
     @ApiProperty({ example: 110000 })
     saldoAkhir: number;
@@ -27,12 +21,6 @@ export class ListSimpananDto {
 
     @ApiPropertyOptional({ example: 'Setoran awal' })
     keterangan?: string;
-
-    @ApiProperty({ example: '2026-06-03T08:00:00.000Z' })
-    createdAt: Date;
-
-    @ApiProperty({ example: '2026-06-03T08:00:00.000Z' })
-    updatedAt: Date;
 }
 
 export class PaginatedSimpananResponse {

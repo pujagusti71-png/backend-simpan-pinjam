@@ -25,10 +25,21 @@ export class SimpananController {
      */
     @Post()
     @ApiOperation({ summary: 'Buat transaksi simpanan baru' })
-    @ApiBody({ type: CreateSimpananDto })
+    @ApiBody({ type: CreateSimpananDto, required: false, description: 'Request body optional. Jika `tanggalSetoran` tidak diisi, server akan menggunakan tanggal saat ini.' })
     @ApiResponse({ status: 201, description: 'Simpanan berhasil dibuat', type: ListSimpananDto })
     async create(@Body() createSimpananDto: CreateSimpananDto) {
         return this.simpananService.create(createSimpananDto);
+    }
+
+    /**
+     * Get all savings records
+     * GET /simpanan
+     */
+    @Get()
+    @ApiOperation({ summary: 'Ambil semua data simpanan' })
+    @ApiResponse({ status: 200, description: 'Daftar semua simpanan', type: [ListSimpananDto] })
+    async findAll() {
+        return this.simpananService.findAll();
     }
 
     /**

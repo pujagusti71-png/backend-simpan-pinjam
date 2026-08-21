@@ -7,8 +7,64 @@ export class AnalisisPekerjaanService {
     constructor(private prisma: PrismaService) { }
 
     /**
-     * Categorize risk level based on delinquency percentage
+     * Seed initial job-risk master data
      */
+    async seedMasterData() {
+        const masterData = [
+            { pekerjaan: 'PNS', skorRisiko: 10, kategoriRisiko: 'Sangat Rendah' },
+            { pekerjaan: 'TNI/POLRI', skorRisiko: 15, kategoriRisiko: 'Sangat Rendah' },
+            { pekerjaan: 'Pegawai BUMN', skorRisiko: 15, kategoriRisiko: 'Sangat Rendah' },
+            { pekerjaan: 'Guru/Dosen', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Tenaga Medis', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Pegawai Bank', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Karyawan Swasta Tetap', skorRisiko: 25, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Karyawan Kontrak', skorRisiko: 40, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Pegawai Honorer', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Profesional', skorRisiko: 30, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Sales/Marketing', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Wirausaha/Pengusaha/UMKM/Pedagang', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Petani/Pekebun/Peternak', skorRisiko: 60, kategoriRisiko: 'Tinggi' },
+            { pekerjaan: 'Nelayan', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+            { pekerjaan: 'Buruh Harian', skorRisiko: 70, kategoriRisiko: 'Sangat Tinggi' },
+            { pekerjaan: 'Buruh Pabrik', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Tukang Bangunan/Teknisi/Mekanik', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Sopir', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Driver Ojol', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+            { pekerjaan: 'Kurir', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'Satpam', skorRisiko: 35, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Cleaning Service', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+            { pekerjaan: 'ART', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+            { pekerjaan: 'Freelance', skorRisiko: 70, kategoriRisiko: 'Tinggi' },
+            { pekerjaan: 'Pensiunan', skorRisiko: 30, kategoriRisiko: 'Rendah' },
+            { pekerjaan: 'Mahasiswa', skorRisiko: 90, kategoriRisiko: 'Sangat Tinggi' },
+            { pekerjaan: 'Belum Bekerja', skorRisiko: 95, kategoriRisiko: 'Sangat Tinggi' },
+        ];
+
+        let successCount = 0;
+
+        for (const item of masterData) {
+            try {
+                await this.prisma.analisisRisikoPekerjaan.upsert({
+                    where: { pekerjaan: item.pekerjaan },
+                    update: {
+                        skorRisiko: item.skorRisiko,
+                        kategoriRisiko: item.kategoriRisiko,
+                    },
+                    create: item,
+                });
+                successCount++;
+            } catch (error) {
+                console.error(`Error seeding ${item.pekerjaan}:`, error);
+            }
+        }
+
+        return {
+            message: `Master data seeded successfully`,
+            successCount,
+            totalRecords: masterData.length,
+        };
+    }
+
     private categorizeRiskByDelinquency(persentase: number): 'rendah' | 'sedang' | 'tinggi' {
         if (persentase <= 10) return 'rendah';
         if (persentase <= 30) return 'sedang';

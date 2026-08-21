@@ -12,6 +12,16 @@ export class AnalisisPekerjaanController {
     constructor(private readonly analisisService: AnalisisPekerjaanService) { }
 
     /**
+     * Seed initial job-risk master data
+     * POST /analisis-pekerjaan/seed
+     */
+    @Post('seed')
+    @ApiOperation({ summary: 'Seed data master analisis risiko pekerjaan' })
+    async seedMasterData() {
+        return this.analisisService.seedMasterData();
+    }
+
+    /**
      * Get analysis by job type (delinquency, avg income, avg ratio, etc.)
      * GET /analisis-pekerjaan
      */

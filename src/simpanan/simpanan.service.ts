@@ -7,21 +7,42 @@ export class SimpananService {
     constructor(private prisma: PrismaService) { }
 
     /**
-     * Calculate interest based on savings amount, rate, and type
+     * Get the annual interest rate based on current balance.
+     *
+     * 0 - 4.999.999       => 0%
+     * 5.000.000 - 19.999.999 => 0.5%
+     * 20.000.000 - 49.999.999 => 1%
+     * 50.000.000 - 99.999.999 => 1.5%
+     * >= 100.000.000     => 2%
      */
-    private calculateInterest(
+    private getAnnualInterestRate(balance: number): number {
+        if (balance >= 100_000_000) return 2;
+        if (balance >= 50_000_000) return 1.5;
+        if (balance >= 20_000_000) return 1;
+        if (balance >= 5_000_000) return 0.5;
+        return 0;
+    }
+
+    private calculateMonthlyInterest(
         saldoSebelumnya: number,
-        bungaSimpanan: number,
-        jenisInterest: 'flat' | 'efektif' = 'flat',
+        annualInterestRate: number,
     ): number {
-        if (jenisInterest === 'flat') {
-            // Flat interest: (balance * rate) / 100
-            return Math.round((saldoSebelumnya * bungaSimpanan) / 100 * 100) / 100;
-        } else {
-            // Compound interest: balance * (1 + rate/100)
-            const nilaiDenganBunga = saldoSebelumnya * (1 + bungaSimpanan / 100);
-            return Math.round((nilaiDenganBunga - saldoSebelumnya) * 100) / 100;
-        }
+        const monthlyInterest = (saldoSebelumnya * annualInterestRate) / 100 / 12;
+        return Math.round(monthlyInterest * 100) / 100;
+    }
+
+    private formatDateToWIB(date: Date | string): string {
+        const parsedDate = new Date(date);
+        return parsedDate
+            .toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta', hour12: false })
+            .replace(' ', 'T');
+    }
+
+    private mapSimpananRecord(record: any) {
+        return {
+            ...record,
+            tanggalSetoran: this.formatDateToWIB(record.tanggalSetoran),
+        };
     }
 
     /**
@@ -67,22 +88,41 @@ export class SimpananService {
 
         // Get current balance
         const currentBalance = await this.getCurrentBalance(createSimpananDto.nasabahId);
+        const tanggalSetoran = new Date(createSimpananDto.tanggalSetoran || new Date());
 
         // Calculate new balance (deposit adds to balance)
         const saldoAkhir = currentBalance + createSimpananDto.jumlahSetoran;
+        const annualInterestRate = this.getAnnualInterestRate(saldoAkhir);
 
-        return await this.prisma.simpanan.create({
+        const simpananRecord = await this.prisma.simpanan.create({
             data: {
                 nasabahId: createSimpananDto.nasabahId,
                 jumlahSetoran: createSimpananDto.jumlahSetoran,
-                bungaSimpanan: createSimpananDto.bungaSimpanan || 0,
-                jenisInterest: createSimpananDto.jenisInterest || 'flat',
-                tanggalSetoran: createSimpananDto.tanggalSetoran || new Date(),
+                bungaSimpanan: annualInterestRate,
+                jenisInterest: 'efektif',
+                tanggalSetoran,
+                createdAt: tanggalSetoran,
+                updatedAt: tanggalSetoran,
                 saldoAkhir,
                 status: 'aktif',
                 keterangan: createSimpananDto.keterangan,
             },
         });
+
+        // Trigger interest accrual for the updated balance right after deposit.
+        await this.applyInterest(createSimpananDto.nasabahId);
+
+        return {
+            id: simpananRecord.id,
+            nasabahId: simpananRecord.nasabahId,
+            jumlahSetoran: simpananRecord.jumlahSetoran,
+            bungaSimpanan: simpananRecord.bungaSimpanan,
+            jenisInterest: simpananRecord.jenisInterest,
+            tanggalSetoran: this.formatDateToWIB(simpananRecord.tanggalSetoran),
+            saldoAkhir: simpananRecord.saldoAkhir,
+            status: simpananRecord.status,
+            keterangan: simpananRecord.keterangan,
+        };
     }
 
     /**
@@ -120,27 +160,21 @@ export class SimpananService {
             throw new BadRequestException('Tidak ada saldo untuk dihitung bunganya');
         }
 
-        // Find latest active savings to get interest rate
-        const latestSimpanan = await this.prisma.simpanan.findFirst({
-            where: {
-                nasabahId,
-                status: 'aktif',
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-
-        if (!latestSimpanan || !latestSimpanan.bungaSimpanan) {
-            throw new BadRequestException('Tidak ada data bunga untuk nasabah ini');
-        }
-
-        // Calculate interest
-        const interest = this.calculateInterest(
+        // Determine annual interest rate based on current balance
+        const annualInterestRate = this.getAnnualInterestRate(currentBalance);
+        const interest = this.calculateMonthlyInterest(
             currentBalance,
-            latestSimpanan.bungaSimpanan,
-            (latestSimpanan.jenisInterest as 'flat' | 'efektif') || 'flat',
+            annualInterestRate,
         );
+
+        if (interest === 0) {
+            return {
+                message: 'Bunga bulan ini 0 karena saldo berada di tingkat bunga 0%',
+                saldoSaatIni: currentBalance,
+                annualInterestRate,
+                interest: 0,
+            };
+        }
 
         const saldoAkhir = currentBalance + interest;
 
@@ -165,6 +199,23 @@ export class SimpananService {
         });
 
         return simpananRecord;
+    }
+
+    /**
+     * Get all savings records
+     */
+    async findAll() {
+        try {
+            const records = await this.prisma.simpanan.findMany({
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            });
+            return records.map((record) => this.mapSimpananRecord(record));
+        } catch (error) {
+            console.error('SimpananService.findAll error:', error);
+            throw new BadRequestException('Gagal mengambil daftar simpanan');
+        }
     }
 
     /**
@@ -194,8 +245,20 @@ export class SimpananService {
         const hasNextPage = page < totalPages;
         const hasPrevPage = page > 1;
 
+        const mappedData: ListSimpananDto[] = data.map((item) => {
+            return {
+                id: item.id,
+                nasabahId: item.nasabahId,
+                jumlahSetoran: item.jumlahSetoran,
+                tanggalSetoran: this.formatDateToWIB(item.tanggalSetoran),
+                saldoAkhir: item.saldoAkhir,
+                status: item.status,
+                keterangan: item.keterangan ?? undefined,
+            };
+        });
+
         return {
-            data: data as ListSimpananDto[],
+            data: mappedData,
             total,
             page,
             limit,
@@ -292,7 +355,7 @@ export class SimpananService {
             throw new NotFoundException(`Simpanan dengan ID ${id} tidak ditemukan`);
         }
 
-        return simpanan;
+        return this.mapSimpananRecord(simpanan);
     }
 
     /**

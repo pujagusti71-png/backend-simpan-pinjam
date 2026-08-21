@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
@@ -8,9 +8,52 @@ import { PaginatedNasabahResponse, ListNasabahDto } from './dto/list-nasabah.dto
 export class NasabahService {
     constructor(private prisma: PrismaService) { }
 
+    private async resolveAnalisisRisikoPekerjaan(pekerjaan: string) {
+        const pekerjaanTrimmed = pekerjaan?.trim();
+        const prismaClient = this.prisma as any;
+
+        if (!pekerjaanTrimmed) {
+            return null;
+        }
+
+        try {
+            return await prismaClient.analisisRisikoPekerjaan.findFirst({
+                where: {
+                    pekerjaan: {
+                        equals: pekerjaanTrimmed,
+                        mode: 'insensitive',
+                    },
+                },
+            });
+        } catch (error: any) {
+            if (error?.code === 'P2021' || error?.code === 'P2022') {
+                return null;
+            }
+            throw error;
+        }
+    }
+
     async create(createNasabahDto: CreateNasabahDto) {
+        const data: any = { ...createNasabahDto };
+
+        if (createNasabahDto.tanggalLahir) {
+            data.tanggalLahir = new Date(createNasabahDto.tanggalLahir);
+        }
+
+        const analisisRisiko = await this.resolveAnalisisRisikoPekerjaan(createNasabahDto.pekerjaan);
+
+        if (!analisisRisiko) {
+            data.analisisRisikoPekerjaanId = null;
+            data.skorRisikoPekerjaan = null;
+            data.kategoriRisikoPekerjaan = null;
+        } else {
+            data.analisisRisikoPekerjaanId = analisisRisiko.id;
+            data.skorRisikoPekerjaan = analisisRisiko.skorRisiko;
+            data.kategoriRisikoPekerjaan = analisisRisiko.kategoriRisiko;
+        }
+
         return await this.prisma.nasabah.create({
-            data: createNasabahDto,
+            data,
         });
     }
 
@@ -52,6 +95,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -65,7 +110,7 @@ export class NasabahService {
         const hasPrevPage = page > 1;
 
         return {
-            data: data as ListNasabahDto[],
+            data: data as unknown as ListNasabahDto[],
             total,
             page,
             limit,
@@ -85,6 +130,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -105,6 +152,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -126,6 +175,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -139,7 +190,21 @@ export class NasabahService {
         const updateData: any = {};
 
         if (updateNasabahDto.nama !== undefined) updateData.nama = updateNasabahDto.nama;
-        if (updateNasabahDto.pekerjaan !== undefined) updateData.pekerjaan = updateNasabahDto.pekerjaan;
+        if (updateNasabahDto.pekerjaan !== undefined) {
+            updateData.pekerjaan = updateNasabahDto.pekerjaan;
+
+            const analisisRisiko = await this.resolveAnalisisRisikoPekerjaan(updateNasabahDto.pekerjaan);
+
+            if (!analisisRisiko) {
+                updateData.analisisRisikoPekerjaanId = null;
+                updateData.skorRisikoPekerjaan = null;
+                updateData.kategoriRisikoPekerjaan = null;
+            } else {
+                updateData.analisisRisikoPekerjaanId = analisisRisiko.id;
+                updateData.skorRisikoPekerjaan = analisisRisiko.skorRisiko;
+                updateData.kategoriRisikoPekerjaan = analisisRisiko.kategoriRisiko;
+            }
+        }
         if (updateNasabahDto.penghasilan !== undefined) updateData.penghasilan = updateNasabahDto.penghasilan;
         if (updateNasabahDto.riwayatPembayaran !== undefined) updateData.riwayatPembayaran = updateNasabahDto.riwayatPembayaran;
         if (updateNasabahDto.jumlahTanggungan !== undefined) updateData.jumlahTanggungan = updateNasabahDto.jumlahTanggungan;
@@ -169,6 +234,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
             },
