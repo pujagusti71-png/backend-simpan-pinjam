@@ -17,7 +17,7 @@ export class SimpananSummaryDto {
     totalPenarikan: number;
 
     @ApiProperty({ example: 15000 })
-    totalBungaTerkumpul: number;
+    totalTerkumpul: number;
 
     @ApiProperty({ example: 3 })
     jumlahTransaksi: number;

@@ -1,2 +1,1 @@
--- AlterTable
-ALTER TABLE "Nasabah" ADD COLUMN "tanggalLahir" TIMESTAMP(3);
+ALTER TABLE "Nasabah" ADD COLUMN IF NOT EXISTS "tanggalLahir" TIMESTAMP(3);

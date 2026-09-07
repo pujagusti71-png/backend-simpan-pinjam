@@ -10,6 +10,15 @@ export class CreatePinjamanDto {
     @ApiPropertyOptional({ example: '1234567890123456', description: 'Nomor KTP pemohon' })
     nik?: string;
 
+    @ApiPropertyOptional({ example: '1990-05-15', description: 'Tanggal lahir pemohon' })
+    tanggalLahir?: string | Date;
+
+    @ApiPropertyOptional({ example: 'Jl. Merdeka No. 10', description: 'Alamat tempat tinggal pemohon' })
+    alamat?: string;
+
+    @ApiPropertyOptional({ example: 'Wiraswasta', description: 'Pekerjaan pemohon' })
+    pekerjaan?: string;
+
     @ApiPropertyOptional({ example: 'test@test.com', description: 'Email pemohon' })
     email?: string;
 

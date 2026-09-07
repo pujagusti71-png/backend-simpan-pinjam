@@ -25,6 +25,21 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Frontend
+
+Frontend statis dari [task-pinjol](https://github.com/onrysaky/task-pinjol) tersedia di folder `frontend/` dan disajikan oleh backend pada root aplikasi.
+
+Jalankan backend dengan:
+
+```bash
+npm install
+npm run start:dev
+```
+
+Buka `http://localhost:3000/` untuk dashboard frontend. Dokumentasi API tersedia di `http://localhost:3000/api`.
+
+Frontend saat ini adalah mockup HTML statis dan belum memanggil endpoint API. Login API tersedia di `POST /auth/login`, sedangkan endpoint lainnya membutuhkan header `Authorization: Bearer <access_token>`.
+
 ## Project setup
 
 ```bash

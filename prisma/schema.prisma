@@ -40,6 +40,7 @@ model Nasabah {
   nama                String
   nik                 String   @unique
   tanggalLahir        DateTime?
+  alamat              String?
   pekerjaan           String // PNS, Freelance, Petani, dll
   penghasilan         Float // Penghasilan per bulan
   saldoRataRata       Float? // Optional - average balance
@@ -135,13 +136,19 @@ model Pembayaran {
   pinjamanId Int
   pinjaman   Pinjaman @relation(fields: [pinjamanId], references: [id], onDelete: Cascade)
 
-  jumlahBayar           Float
-  tanggalBayar          DateTime  @default(now())
-  statusBayar           String // "lancar" or "telat"
+  nomorCicilan         Int?
+  jumlahPokok          Float?
+  jumlahBunga          Float?
+  jumlahBayar          Float
+  tanggalPembayaran    DateTime  @default(now())
+  tanggalBayar         DateTime? @default(now())
+  statusBayar          String?   @default("lancar") // "lancar" or "telat"
   dariTanggalSeharusnya DateTime? // Expected payment date
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("Pembayaran")
 }
 
 // Model Riwayat Kredit (Credit History)

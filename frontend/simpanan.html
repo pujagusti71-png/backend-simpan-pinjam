@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Simpanan</title>
+    <style>
+        /* --- CSS STYLES (The Makeup/Design) --- */
+        
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 1. SIDEBAR STYLES (Reused from Dashboard) */
+        .sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #128c7e;
+            border-radius: 8px;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        /* NOTICE: The active class will now be on 'Simpanan' in the HTML */
+        .nav-item.active {
+            background-color: #e0f2f1;
+            color: #128c7e;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+        
+        /* 2. MAIN CONTENT & HEADER */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: #111;
+        }
+
+        .btn-primary {
+            background-color: #128c7e;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* 3. FILTER SECTION */
+        .card {
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+            margin-bottom: 24px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .filter-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 16px;
+        }
+
+        .active-filters {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .chip {
+            background-color: #f3f4f6;
+            padding: 4px 10px;
+            border-radius: 16px;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        /* 4. TABLE STYLES */
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .table-header h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #111;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .user-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #111;
+        }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        /* Badges for Table */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-type-sukarela { background-color: #e0f2fe; color: #0369a1; }
+        .badge-type-wajib { background-color: #ede9fe; color: #5b21b6; }
+        .badge-type-deposito { background-color: #fef08a; color: #854d0e; }
+        
+        .badge-status-aktif { background-color: #def7ec; color: #03543f; }
+        .badge-status-tidak { background-color: #fde8e8; color: #9b1c1c; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 20px;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 8px;
+        }
+
+        .page-btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #374151;
+        }
+
+        .page-btn.active {
+            background-color: #128c7e;
+            color: white;
+            border-color: #128c7e;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR START -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            Simpan Pinjam
+        </div>
+        
+        <div class="nav-menu">
+    <!-- Arahkan kembali ke file utama -->
+    <a href="index.html" class="nav-item">Dashboard</a>
+    
+    <!-- Arahkan ke file manajemen simpanan -->
+    <a href="simpanan.html" class="nav-item active">Simpanan</a>
+    
+    <!-- Karena dua halaman ini belum kita buat, biarkan pakai # dulu -->
+    <a href="pinjaman.html" class="nav-item">Pinjaman</a>
+    <a href="laporan.html" class="nav-item">Laporan</a>
+</div>
+        
+        <div class="user-profile">
+            <div class="avatar">DA</div>
+            <div>
+                <div style="font-weight: 600; font-size: 0.9rem; color: #111;">Data Analyst</div>
+                <div style="font-size: 0.8rem; color: #6b7280;">admin@koperasi.id</div>
+            </div>
+        </div>
+    </div>
+    <!-- SIDEBAR END -->
+
+    <!-- MAIN CONTENT START -->
+    <div class="main-content">
+        
+        <!-- HEADER -->
+        <div class="header">
+            <h1>Data Simpanan</h1>
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <div class="avatar" style="width: 32px; height: 32px;"></div>
+                <button id="new-savings-button" class="btn-primary" type="button">+ Transaksi Simpanan</button>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
+        <div class="card">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>Periode</label>
+                    <input type="text" value="01 Mei 2025 - 31 Mei 2025">
+                </div>
+                <div class="filter-group">
+                    <label>Status Nasabah</label>
+                    <select><option>Semua Status</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Tipe Simpanan</label>
+                    <select><option>Semua Tipe</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Rentang Saldo</label>
+                    <select><option>Min - Max Saldo</option></select>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <div class="active-filters">
+                    Filter Aktif:
+                    <span class="chip">Mei 2025</span>
+                    <span class="chip">Semua Tipe</span>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button style="border: none; background: none; color: #6b7280; font-weight: 600; cursor: pointer;">Reset Filter</button>
+                    <button style="background: #f3f4f6; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">Terapkan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLE CARD -->
+        <div class="card">
+            <div class="table-header">
+                <h2>Daftar Nasabah Simpanan</h2>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" placeholder="Cari nasabah..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                    <button style="background: white; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">Export CSV</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nasabah</th>
+                        <th>Nasabah ID</th>
+                        <th>Tanggal Transaksi</th>
+                        <th>Jumlah</th>
+                        <th>Saldo Akhir</th>
+                        <th>Bunga Tabungan</th>
+                        <th>Status</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody data-savings-body><tr><td colspan="8">Memuat data...</td></tr></tbody>
+            </table>
+
+            <div class="pagination">
+                <div data-savings-count>Memuat data...</div>
+                <div class="page-numbers">
+                    <button class="page-btn">&lt;</button>
+                    <button class="page-btn active">1</button>
+                    <button class="page-btn">2</button>
+                    <button class="page-btn">3</button>
+                    <span style="padding: 6px;">...</span>
+                    <button class="page-btn">22</button>
+                    <button class="page-btn">&gt;</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <!-- MAIN CONTENT END -->
+
+<script src="app.js"></script>
+</body>
+</html>

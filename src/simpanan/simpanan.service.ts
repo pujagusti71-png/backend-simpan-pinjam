@@ -39,8 +39,12 @@ export class SimpananService {
     }
 
     private mapSimpananRecord(record: any) {
+        const bungaSimpanan = record.bungaSimpanan ?? 0;
+
         return {
             ...record,
+            bungaSimpanan,
+            potonganSimpanan: bungaSimpanan,
             tanggalSetoran: this.formatDateToWIB(record.tanggalSetoran),
         };
     }
@@ -53,6 +57,10 @@ export class SimpananService {
             where: {
                 nasabahId,
                 status: 'aktif',
+                OR: [
+                    { keterangan: null },
+                    { keterangan: { not: 'Potongan tabungan' } },
+                ],
             },
             orderBy: {
                 createdAt: 'desc',
@@ -67,8 +75,37 @@ export class SimpananService {
      * Create new savings deposit
      */
     async create(createSimpananDto: CreateSimpananDto) {
+        let nasabahId = createSimpananDto.nasabahId;
+
+        if (!nasabahId && createSimpananDto.nama && createSimpananDto.nik) {
+            const existingNasabah = await this.prisma.nasabah.findUnique({
+                where: { nik: createSimpananDto.nik },
+            });
+
+            if (existingNasabah) {
+                nasabahId = existingNasabah.id;
+            } else {
+                const createdNasabah = await this.prisma.nasabah.create({
+                    data: {
+                        nama: createSimpananDto.nama,
+                        nik: createSimpananDto.nik,
+                        tanggalLahir: createSimpananDto.tanggalLahir ? new Date(createSimpananDto.tanggalLahir) : null,
+                        alamat: createSimpananDto.alamat,
+                        pekerjaan: createSimpananDto.pekerjaan || 'Lainnya',
+                        penghasilan: Number(createSimpananDto.penghasilan ?? 0),
+                        riwayatPembayaran: 'Belum ada data',
+                    },
+                });
+                nasabahId = createdNasabah.id;
+            }
+        }
+
+        if (!nasabahId) {
+            throw new BadRequestException('Nasabah harus dipilih atau data nasabah baru harus lengkap');
+        }
+
         const nasabah = await this.prisma.nasabah.findUnique({
-            where: { id: createSimpananDto.nasabahId },
+            where: { id: nasabahId },
             select: {
                 id: true,
                 nama: true,
@@ -83,20 +120,17 @@ export class SimpananService {
         });
 
         if (!nasabah) {
-            throw new NotFoundException(`Nasabah dengan ID ${createSimpananDto.nasabahId} tidak ditemukan`);
+            throw new NotFoundException(`Nasabah dengan ID ${nasabahId} tidak ditemukan`);
         }
 
-        // Get current balance
-        const currentBalance = await this.getCurrentBalance(createSimpananDto.nasabahId);
+        const currentBalance = await this.getCurrentBalance(nasabahId);
         const tanggalSetoran = new Date(createSimpananDto.tanggalSetoran || new Date());
-
-        // Calculate new balance (deposit adds to balance)
         const saldoAkhir = currentBalance + createSimpananDto.jumlahSetoran;
         const annualInterestRate = this.getAnnualInterestRate(saldoAkhir);
 
         const simpananRecord = await this.prisma.simpanan.create({
             data: {
-                nasabahId: createSimpananDto.nasabahId,
+                nasabahId,
                 jumlahSetoran: createSimpananDto.jumlahSetoran,
                 bungaSimpanan: annualInterestRate,
                 jenisInterest: 'efektif',
@@ -109,14 +143,14 @@ export class SimpananService {
             },
         });
 
-        // Trigger interest accrual for the updated balance right after deposit.
-        await this.applyInterest(createSimpananDto.nasabahId);
+        const bungaSimpanan = simpananRecord.bungaSimpanan ?? 0;
 
         return {
             id: simpananRecord.id,
             nasabahId: simpananRecord.nasabahId,
             jumlahSetoran: simpananRecord.jumlahSetoran,
-            bungaSimpanan: simpananRecord.bungaSimpanan,
+            bungaSimpanan,
+            potonganSimpanan: bungaSimpanan,
             jenisInterest: simpananRecord.jenisInterest,
             tanggalSetoran: this.formatDateToWIB(simpananRecord.tanggalSetoran),
             saldoAkhir: simpananRecord.saldoAkhir,
@@ -157,7 +191,7 @@ export class SimpananService {
         const currentBalance = await this.getCurrentBalance(nasabahId);
 
         if (currentBalance === 0) {
-            throw new BadRequestException('Tidak ada saldo untuk dihitung bunganya');
+            throw new BadRequestException('Tidak ada saldo untuk dihitung potongannya');
         }
 
         // Determine annual interest rate based on current balance
@@ -169,7 +203,7 @@ export class SimpananService {
 
         if (interest === 0) {
             return {
-                message: 'Bunga bulan ini 0 karena saldo berada di tingkat bunga 0%',
+                message: 'Potongan bulan ini 0 karena saldo berada di tingkat potongan 0%',
                 saldoSaatIni: currentBalance,
                 annualInterestRate,
                 interest: 0,
@@ -185,7 +219,7 @@ export class SimpananService {
                 jumlahSetoran: interest,
                 saldoAkhir,
                 status: 'aktif',
-                keterangan: 'Bunga tabungan',
+                keterangan: 'Potongan tabungan',
             },
         });
 
@@ -207,6 +241,12 @@ export class SimpananService {
     async findAll() {
         try {
             const records = await this.prisma.simpanan.findMany({
+                where: {
+                    OR: [
+                        { keterangan: null },
+                        { keterangan: { not: 'Potongan tabungan' } },
+                    ],
+                },
                 orderBy: {
                     createdAt: 'desc',
                 },

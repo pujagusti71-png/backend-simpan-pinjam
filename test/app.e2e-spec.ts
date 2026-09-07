@@ -20,7 +20,12 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect('Content-Type', /html/)
+      .expect((response) => {
+        if (!response.text.includes('<title>Dashboard Utama</title>')) {
+          throw new Error('Frontend dashboard was not served at the root route');
+        }
+      });
   });
 
   afterEach(async () => {

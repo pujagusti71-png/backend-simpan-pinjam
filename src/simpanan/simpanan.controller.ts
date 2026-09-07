@@ -107,8 +107,8 @@ export class SimpananController {
      * POST /simpanan/apply-interest/:nasabahId
      */
     @Post('apply-interest/:nasabahId')
-    @ApiOperation({ summary: 'Terapkan bunga simpanan untuk nasabah' })
-    @ApiResponse({ status: 201, description: 'Bunga telah ditambahkan', type: ListSimpananDto })
+    @ApiOperation({ summary: 'Terapkan potongan simpanan untuk nasabah' })
+    @ApiResponse({ status: 201, description: 'Potongan telah ditambahkan', type: ListSimpananDto })
     async applyInterest(@Param('nasabahId') nasabahId: string) {
         return this.simpananService.applyInterest(parseInt(nasabahId));
     }

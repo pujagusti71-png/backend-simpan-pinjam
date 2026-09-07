@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Pinjaman</title>
+    <style>
+        /* --- CSS STYLES --- */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 1. SIDEBAR STYLES */
+        .sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #333;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background-color: #128c7e;
+            border-radius: 8px;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #666;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .nav-item.active {
+            background-color: #e0f2f1;
+            color: #128c7e;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #d1d5db;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #4b5563;
+            font-size: 0.9rem;
+        }
+        
+        /* 2. MAIN CONTENT */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 5px 0;
+            font-size: 1.5rem;
+            color: #111;
+        }
+
+        .header p {
+            margin: 0;
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background-color: #128c7e;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: white; 
+            border: 1px solid #d1d5db; 
+            padding: 10px 16px; 
+            border-radius: 6px; 
+            font-weight: 600; 
+            cursor: pointer;
+            color: #374151;
+        }
+
+        /* 3. CARD & FILTERS */
+        .card {
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+            margin-bottom: 24px;
+        }
+
+        .filter-grid {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        .risk-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .risk-chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+
+        .risk-chip.rendah { background-color: #def7ec; color: #03543f; }
+        .risk-chip.sedang { background-color: white; border-color: #d1d5db; color: #6b7280; }
+        .risk-chip.tinggi { background-color: white; border-color: #d1d5db; color: #6b7280; }
+
+        /* 4. TABLE STYLES */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 600; color: #111; }
+        .user-role { font-size: 0.8rem; color: #6b7280; }
+
+        /* Status & Risk Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Risk Colors */
+        .text-rendah { color: #059669; }
+        .text-sedang { color: #d97706; }
+        .text-tinggi { color: #dc2626; }
+
+        /* Status Colors */
+        .status-approve { background-color: #def7ec; color: #03543f; }
+        .status-review { background-color: #f3f4f6; color: #4b5563; }
+        .status-reject { background-color: #fde8e8; color: #9b1c1c; }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .dot-approve { background-color: #059669; }
+        .dot-review { background-color: #6b7280; }
+        .dot-reject { background-color: #dc2626; }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR START -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            Simpan Pinjam
+        </div>
+        
+        <div class="nav-menu">
+            <a href="index.html" class="nav-item">Dashboard</a>
+            <!-- THE ACTIVE CLASS MOVES HERE! -->
+            <a href="simpanan.html" class="nav-item">Simpanan</a>
+            <a href="pinjaman.html" class="nav-item active">Pinjaman</a>
+            <a href="laporan.html" class="nav-item">Laporan</a>
+        </div>
+        
+        <div class="user-profile">
+            <div class="avatar">DA</div>
+            <div>
+                <div style="font-weight: 600; font-size: 0.9rem; color: #111;">Data Analyst</div>
+                <div style="font-size: 0.8rem; color: #6b7280;">admin@koperasi.id</div>
+            </div>
+        </div>
+    </div>
+    <!-- SIDEBAR END -->
+
+    <!-- MAIN CONTENT START -->
+    <div class="main-content">
+        
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <div style="font-size: 0.85rem; color: #6b7280; font-weight: 500;">Pinjaman</div>
+                <h1>Kelola Pinjaman</h1>
+                <p>Analisis pengajuan, pantau tunggakan, dan kelola portofolio pinjaman</p>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn-secondary">Export Data</button>
+                <button id="payment-button" type="button" class="btn-secondary">Bayar Cicilan</button>
+                <button id="new-loan-button" type="button" class="btn-primary">+ Pengajuan Baru</button>
+            </div>
+        </div>
+
+        <!-- FILTER CARD -->
+        <div class="card">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>Periode Pengajuan</label>
+                    <input type="text" value="01 Mei 2025 - 31 Mei 2025">
+                </div>
+                <div class="filter-group">
+                    <label>Status Pinjaman</label>
+                    <select><option>Semua Status</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Tenor</label>
+                    <select><option>Semua Tenor</option></select>
+                </div>
+                <div class="filter-group">
+                    <label>Tingkat Risiko</label>
+                    <div class="risk-filters">
+                        <div class="risk-chip rendah">Rendah</div>
+                        <div class="risk-chip sedang">Sedang</div>
+                        <div class="risk-chip tinggi">Tinggi</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.1rem; color: #111;">Pembayaran Cicilan</h2>
+                <p style="margin: 6px 0 0; color: #6b7280; font-size: 0.85rem;">Pantau status angsuran dan rincian pembayaran terakhir.</p>
+            </div>
+            <div data-payment-summary style="display:grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap:16px;">
+                <div style="padding:18px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
+                    <div style="font-size:0.78rem; color:#6b7280; text-transform:uppercase; font-weight:700;">Pembayaran lancar</div>
+                    <div style="margin-top:8px; font-size:1.6rem; font-weight:700; color:#087f5b;">0</div>
+                </div>
+                <div style="padding:18px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
+                    <div style="font-size:0.78rem; color:#6b7280; text-transform:uppercase; font-weight:700;">Terlambat</div>
+                    <div style="margin-top:8px; font-size:1.6rem; font-weight:700; color:#b42318;">0</div>
+                </div>
+                <div style="padding:18px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb;">
+                    <div style="font-size:0.78rem; color:#6b7280; text-transform:uppercase; font-weight:700;">Total nominal</div>
+                    <div style="margin-top:8px; font-size:1.1rem; font-weight:700; color:#123b36;">Rp 0</div>
+                </div>
+            </div>
+            <div style="margin-top:20px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nasabah</th>
+                            <th>Pinjaman</th>
+                            <th>Jumlah Bayar</th>
+                            <th>Jatuh Tempo</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody data-payments-body><tr><td colspan="5">Memuat data pembayaran...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TABLE CARD -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.1rem; color: #111;">Daftar Nasabah Pinjaman</h2>
+                <div data-loan-count style="font-size: 0.85rem; color: #6b7280;">Memuat data...</div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID / Nasabah</th>
+                        <th>Pekerjaan</th>
+                        <th>Jumlah Pinjaman</th>
+                        <th>Tenor</th>
+                        <th>Risiko</th>
+                        <th>Status Pengajuan</th>
+                        <th>Tanggal Pengajuan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody data-loans-body><tr><td colspan="8">Memuat data...</td></tr></tbody>
+            </table>
+        </div>
+
+    </div>
+    <!-- MAIN CONTENT END -->
+
+<script src="app.js"></script>
+</body>
+</html>

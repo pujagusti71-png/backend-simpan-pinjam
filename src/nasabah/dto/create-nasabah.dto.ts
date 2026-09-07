@@ -7,6 +7,9 @@ export class CreateNasabahDto {
     @ApiProperty({ example: '3204123456789012' })
     nik!: string;
 
+    @ApiProperty({ example: 'Jl. Merdeka No. 10' })
+    alamat!: string;
+
     @ApiProperty({ required: false, example: '1990-05-15' })
     tanggalLahir?: string | Date;
 

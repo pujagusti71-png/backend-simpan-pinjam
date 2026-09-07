@@ -12,6 +12,9 @@ export class PinjamanService {
 
         const nama = payload.nama || payload.name || payload.namaLengkap;
         const nik = payload.nik || payload.NIK;
+        const tanggalLahir = payload.tanggalLahir ? new Date(payload.tanggalLahir) : undefined;
+        const alamat = payload.alamat?.trim();
+        const pekerjaan = payload.pekerjaan?.trim();
         const email = payload.email || payload.emailAddress;
         const penghasilan = Number(payload.penghasilan ?? payload.penghasilanBulanan ?? 0);
         const cicilan = Number(payload.cicilan ?? payload.cicilanBulanan ?? 0);
@@ -19,11 +22,13 @@ export class PinjamanService {
         const tenor = Number(payload.tenor ?? payload.tenorBulan ?? 0);
         const bunga = Number(payload.bunga ?? payload.sukuBunga ?? 0);
         const tujuan = payload.tujuan || payload.purpose || null;
-        const risiko = payload.risiko || payload.risk || 'Belum ditentukan';
-        const rekomendasi = payload.rekomendasi || payload.recommendation || 'Review';
 
-        if (!nama || !nik) {
-            throw new BadRequestException('Field nama dan nik wajib diisi');
+        if (!nama || !nik || !tanggalLahir || !alamat || !pekerjaan) {
+            throw new BadRequestException('Field nama, nik, tanggal lahir, alamat, dan pekerjaan wajib diisi');
+        }
+
+        if (Number.isNaN(tanggalLahir.getTime())) {
+            throw new BadRequestException('Format tanggal lahir tidak valid');
         }
 
         if (!jumlah || !tenor) {
@@ -33,6 +38,9 @@ export class PinjamanService {
         return {
             nama,
             nik,
+            tanggalLahir,
+            alamat,
+            pekerjaan,
             email,
             penghasilan,
             cicilan,
@@ -40,9 +48,86 @@ export class PinjamanService {
             tenor,
             bunga,
             tujuan,
-            risiko,
-            rekomendasi,
         };
+    }
+
+    private async validateLoanEligibility(pekerjaan: string, jumlah: number) {
+        const normalizedPekerjaan = pekerjaan?.trim();
+
+        let analisis = await this.prisma.analisisRisikoPekerjaan.findFirst({
+            where: { pekerjaan: { equals: normalizedPekerjaan, mode: 'insensitive' } },
+        });
+
+        if (!analisis) {
+            const fallbackMasterData = [
+                { pekerjaan: 'PNS', skorRisiko: 10, kategoriRisiko: 'Sangat Rendah' },
+                { pekerjaan: 'TNI/POLRI', skorRisiko: 15, kategoriRisiko: 'Sangat Rendah' },
+                { pekerjaan: 'Pegawai BUMN', skorRisiko: 15, kategoriRisiko: 'Sangat Rendah' },
+                { pekerjaan: 'Guru/Dosen', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Tenaga Medis', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Pegawai Bank', skorRisiko: 20, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Karyawan Swasta Tetap', skorRisiko: 25, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Karyawan Kontrak', skorRisiko: 40, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Pegawai Honorer', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Profesional', skorRisiko: 30, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Sales/Marketing', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Wirausaha/Pengusaha/UMKM/Pedagang', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Petani/Pekebun/Peternak', skorRisiko: 60, kategoriRisiko: 'Tinggi' },
+                { pekerjaan: 'Nelayan', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+                { pekerjaan: 'Buruh Harian', skorRisiko: 70, kategoriRisiko: 'Sangat Tinggi' },
+                { pekerjaan: 'Buruh Pabrik', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Tukang Bangunan/Teknisi/Mekanik', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Sopir', skorRisiko: 45, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Driver Ojol', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+                { pekerjaan: 'Kurir', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'Satpam', skorRisiko: 35, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Cleaning Service', skorRisiko: 50, kategoriRisiko: 'Sedang' },
+                { pekerjaan: 'ART', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
+                { pekerjaan: 'Freelance', skorRisiko: 70, kategoriRisiko: 'Tinggi' },
+                { pekerjaan: 'Pensiunan', skorRisiko: 30, kategoriRisiko: 'Rendah' },
+                { pekerjaan: 'Mahasiswa', skorRisiko: 90, kategoriRisiko: 'Sangat Tinggi' },
+                { pekerjaan: 'Belum Bekerja', skorRisiko: 95, kategoriRisiko: 'Sangat Tinggi' },
+            ];
+
+            const found = fallbackMasterData.find((item) => item.pekerjaan.toLowerCase() === normalizedPekerjaan.toLowerCase());
+
+            if (found) {
+                analisis = await this.prisma.analisisRisikoPekerjaan.upsert({
+                    where: { pekerjaan: found.pekerjaan },
+                    update: {
+                        skorRisiko: found.skorRisiko,
+                        kategoriRisiko: found.kategoriRisiko,
+                    },
+                    create: found,
+                });
+            }
+        }
+
+        if (!analisis) {
+            throw new BadRequestException(`Pekerjaan "${pekerjaan}" belum memiliki analisis risiko`);
+        }
+
+        const kategori = analisis.kategoriRisiko.trim().toLowerCase();
+        if (kategori === 'sangat tinggi') {
+            throw new BadRequestException('Pengajuan tidak dapat diproses karena pekerjaan memiliki risiko sangat tinggi');
+        }
+
+        if (kategori === 'tinggi' && jumlah > 2_000_000) {
+            throw new BadRequestException('Pekerjaan dengan risiko tinggi hanya dapat mengajukan pinjaman maksimal Rp2.000.000');
+        }
+
+        return {
+            analisis,
+            rekomendasi: kategori === 'tinggi' ? 'Approve dengan batas Rp2.000.000' : 'Approve',
+        };
+    }
+
+    private getLoanInterestRate(jumlahPinjaman: number): number {
+        if (jumlahPinjaman >= 100_000_000) return 2;
+        if (jumlahPinjaman >= 50_000_000) return 1.5;
+        if (jumlahPinjaman >= 20_000_000) return 1;
+        if (jumlahPinjaman >= 5_000_000) return 0.5;
+        return 0;
     }
 
     private async ensureNasabah(payload: ReturnType<PinjamanService['normalizePayload']>) {
@@ -51,6 +136,16 @@ export class PinjamanService {
         });
 
         if (existingNasabah) {
+            await this.prisma.nasabah.update({
+                where: { id: existingNasabah.id },
+                data: {
+                    nama: payload.nama,
+                    tanggalLahir: payload.tanggalLahir,
+                    alamat: payload.alamat,
+                    pekerjaan: payload.pekerjaan,
+                    penghasilan: payload.penghasilan,
+                },
+            });
             return existingNasabah.id;
         }
 
@@ -58,7 +153,9 @@ export class PinjamanService {
             data: {
                 nama: payload.nama,
                 nik: payload.nik,
-                pekerjaan: payload.tujuan ? 'Tidak tercantum' : 'Tidak tercantum',
+                tanggalLahir: payload.tanggalLahir,
+                alamat: payload.alamat,
+                pekerjaan: payload.pekerjaan,
                 penghasilan: payload.penghasilan,
                 riwayatPembayaran: 'Belum ada data',
             },
@@ -72,7 +169,7 @@ export class PinjamanService {
      * @param jumlahPinjaman Loan amount
      * @param sukuBunga Interest rate (%)
      * @param tenor Loan duration (months)
-     * @param jenisBunga Interest type (flat/efektif)
+    * @param jenisBunga Interest type (flat/efektif)
      */
     private calculateInstallment(
         jumlahPinjaman: number,
@@ -88,7 +185,7 @@ export class PinjamanService {
             totalBunga = (jumlahPinjaman * sukuBunga * tenor) / 100;
             cicilanBulanan = (jumlahPinjaman + totalBunga) / tenor;
         } else {
-            // Efektif (compound) interest calculation
+            // Efektif (compound) interest calculation for legacy records.
             const monthlyRate = sukuBunga / 100 / 12;
             cicilanBulanan =
                 (jumlahPinjaman * monthlyRate * Math.pow(1 + monthlyRate, tenor)) /
@@ -108,13 +205,15 @@ export class PinjamanService {
     async create(createPinjamanDto: CreatePinjamanDto) {
         try {
             const payload = this.normalizePayload(createPinjamanDto);
+            const eligibility = await this.validateLoanEligibility(payload.pekerjaan, payload.jumlah);
             const nasabahId = await this.ensureNasabah(payload);
+            const bunga = this.getLoanInterestRate(payload.jumlah);
 
             const calculations = this.calculateInstallment(
                 payload.jumlah,
-                payload.bunga || 0,
+                bunga,
                 payload.tenor,
-                'efektif',
+                'flat',
             );
 
             const createdPinjaman = await this.prisma.pinjaman.create({
@@ -122,8 +221,8 @@ export class PinjamanService {
                     nasabahId,
                     jumlahPinjaman: payload.jumlah,
                     tenor: payload.tenor,
-                    sukuBunga: payload.bunga || 0,
-                    jenisBunga: 'efektif',
+                    sukuBunga: bunga,
+                    jenisBunga: 'flat',
                     status: 'pending',
                     cicilanBulanan: calculations.cicilanBulanan,
                     totalBunga: calculations.totalBunga,
@@ -134,9 +233,9 @@ export class PinjamanService {
             await this.prisma.risikoNasabah.create({
                 data: {
                     nasabahId,
-                    skorRisiko: payload.risiko === 'Rendah' ? 20 : payload.risiko === 'Sedang' ? 50 : 80,
-                    kategoriRisiko: payload.risiko.toLowerCase(),
-                    rekomendasi: payload.rekomendasi,
+                    skorRisiko: eligibility.analisis.skorRisiko,
+                    kategoriRisiko: eligibility.analisis.kategoriRisiko.toLowerCase(),
+                    rekomendasi: eligibility.rekomendasi,
                 },
             }).catch(() => undefined);
 
@@ -147,6 +246,11 @@ export class PinjamanService {
                 nik: payload.nik,
                 jumlahPinjaman: createdPinjaman.jumlahPinjaman,
                 tenor: createdPinjaman.tenor ?? payload.tenor,
+                sukuBunga: createdPinjaman.sukuBunga,
+                jenisBunga: createdPinjaman.jenisBunga,
+                cicilanBulanan: createdPinjaman.cicilanBulanan,
+                totalBunga: createdPinjaman.totalBunga,
+                totalPembayaran: createdPinjaman.totalPembayaran,
                 createdAt: createdPinjaman.createdAt ?? new Date().toISOString(),
             };
         } catch (error) {

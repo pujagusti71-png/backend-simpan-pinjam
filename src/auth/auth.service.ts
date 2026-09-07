@@ -17,6 +17,11 @@ export class AuthService {
         console.log('[AuthService] typeof loginDto:', typeof loginDto);
 
         try {
+            const defaultAdmin = await this.ensureDefaultAdmin();
+            if (defaultAdmin && defaultAdmin.success && defaultAdmin.admin) {
+                console.log('[AuthService] Default admin ensured:', defaultAdmin.admin.username);
+            }
+
             console.log('[AuthService] About to call prisma.admin.findUnique...');
 
             const admin = await this.prisma.admin.findUnique({
@@ -123,9 +128,8 @@ export class AuthService {
         return nasabah;
     }
 
-    async initializeAdmin() {
+    async ensureDefaultAdmin() {
         try {
-            // Check if admin already exists
             const existingAdmin = await this.prisma.admin.findUnique({
                 where: { username: 'admin' },
             });
@@ -142,10 +146,8 @@ export class AuthService {
                 };
             }
 
-            // Hash password
             const hashedPassword = await bcrypt.hash('admin123', 10);
 
-            // Create admin user
             const admin = await this.prisma.admin.create({
                 data: {
                     username: 'admin',
@@ -173,5 +175,9 @@ export class AuthService {
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
+    }
+
+    async initializeAdmin() {
+        return this.ensureDefaultAdmin();
     }
 }
