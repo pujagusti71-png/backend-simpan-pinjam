@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan & Analitik</title>
+    <style>
+        /* --- CSS STYLES --- */
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 1. SIDEBAR STYLES (Konsisten di semua halaman) */
+        .sidebar {
+            width: 260px;
+            background-color: #ffffff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .logo { font-weight: bold; font-size: 1.2rem; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; color: #333; }
+        .logo-icon { width: 32px; height: 32px; background-color: #128c7e; border-radius: 8px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+        .nav-item { padding: 12px 16px; border-radius: 8px; color: #666; text-decoration: none; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+        
+        /* Highlight hijau untuk halaman aktif */
+        .nav-item.active { background-color: #e0f2f1; color: #128c7e; }
+
+        .user-profile { display: flex; align-items: center; gap: 12px; padding-top: 20px; border-top: 1px solid #eee; }
+        .avatar { width: 40px; height: 40px; background-color: #d1d5db; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #4b5563; font-size: 0.9rem; }
+        
+        /* 2. MAIN CONTENT */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+        }
+
+        .header h1 { margin: 5px 0; font-size: 1.5rem; color: #111; }
+        .header p { margin: 0; color: #6b7280; font-size: 0.95rem; }
+
+        .btn-secondary {
+            background: white; border: 1px solid #d1d5db; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; color: #374151; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* 3. MENU KARTU KECIL (GRID LAYOUT) */
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* Membuat 5 kolom rata */
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .report-card {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+            text-align: center;
+        }
+
+        .icon-box {
+            width: 40px; height: 40px; border-radius: 8px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+        }
+
+        .report-card h3 { margin: 0 0 8px 0; font-size: 0.85rem; color: #111; }
+        .report-card p { margin: 0; font-size: 0.75rem; color: #6b7280; line-height: 1.4; }
+
+        /* 4. LAYOUT BAWAH (GRAFIK & LIST) */
+        .bottom-layout {
+            display: flex;
+            gap: 24px;
+        }
+
+        .chart-container {
+            flex: 2; /* Mengambil ruang 2 kali lebih besar */
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+        }
+
+        .side-container {
+            flex: 1; /* Mengambil sisa ruang */
+            background-color: #ffffff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f3f4f6;
+        }
+
+        .section-title { margin: 0 0 5px 0; font-size: 1.1rem; color: #111; }
+        .section-subtitle { margin: 0 0 20px 0; font-size: 0.85rem; color: #6b7280; }
+
+        /* Style untuk list pekerjaan */
+        .risk-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .risk-name {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: #374151;
+            font-weight: 500;
+        }
+
+        .risk-percent { font-weight: bold; color: #111; font-size: 0.9rem; }
+        
+        .risk-bar { width: 10px; height: 10px; border-radius: 2px; }
+
+        .btn-text {
+            color: #128c7e; background: none; border: none; font-weight: 600; cursor: pointer; padding: 0; margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body data-report>
+
+    <!-- SIDEBAR START -->
+    <div class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"></div>
+            Simpan Pinjam
+        </div>
+        
+        <div class="nav-menu">
+            <a href="index.html" class="nav-item">Dashboard</a>
+            <a href="pinjaman.html" class="nav-item">Pinjaman</a>
+            <a href="simpanan.html" class="nav-item">Simpanan</a>
+            <!-- CLASS ACTIVE ADA DI SINI SEKARANG! -->
+            <a href="laporan.html" class="nav-item active">Laporan</a>
+        </div>
+        
+        <div class="user-profile">
+            <div class="avatar">DA</div>
+            <div>
+                <div style="font-weight: 600; font-size: 0.9rem; color: #111;">Data Analyst</div>
+                <div style="font-size: 0.8rem; color: #6b7280;">admin@koperasi.id</div>
+            </div>
+        </div>
+    </div>
+    <!-- SIDEBAR END -->
+
+    <!-- MAIN CONTENT START -->
+    <div class="main-content">
+        
+        <!-- HEADER -->
+        <div class="header">
+            <div>
+                <div style="font-size: 0.85rem; color: #6b7280; font-weight: 500;">Analitik Lanjutan</div>
+                <h1>Laporan & Analitik</h1>
+                <p>Pantau performa keuangan dan kesehatan portofolio secara real-time</p>
+            </div>
+            <div>
+                <button class="btn-secondary">⬇ Ekspor Data</button>
+            </div>
+        </div>
+
+        <!-- 5 KARTU MENU ATAS -->
+        <div class="reports-grid">
+            <div class="report-card">
+                <div class="icon-box" style="background-color: #e0f2fe; color: #0284c7;">📁</div>
+                <h3>Portofolio Pinjaman</h3>
+                <p><strong data-report-stat="loans">-</strong> transaksi pinjaman</p>
+            </div>
+            <div class="report-card">
+                <div class="icon-box" style="background-color: #d1fae5; color: #059669;">🛡️</div>
+                <h3>Analisis Risiko</h3>
+                <p><strong data-report-stat="overdue">-</strong> pembayaran terlambat</p>
+            </div>
+            <div class="report-card">
+                <div class="icon-box" style="background-color: #ede9fe; color: #7c3aed;">📈</div>
+                <h3>Tren Simpanan</h3>
+                <p><strong data-report-stat="savings">-</strong> transaksi simpanan</p>
+            </div>
+            <div class="report-card">
+                <div class="icon-box" style="background-color: #fef3c7; color: #d97706;">💰</div>
+                <h3>LDR & Likuiditas</h3>
+                <p><strong data-report-stat="customers">-</strong> total nasabah</p>
+            </div>
+            <div class="report-card">
+                <div class="icon-box" style="background-color: #fee2e2; color: #dc2626;">⚠️</div>
+                <h3>Data Tidak Aktif</h3>
+                <p>Daftar nasabah tidak aktif periode ini</p>
+            </div>
+        </div>
+
+        <!-- BAGIAN BAWAH: GRAFIK & DAFTAR RISIKO -->
+        <div class="bottom-layout">
+            
+            <!-- GRAFIK KIRI -->
+            <div class="chart-container">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h2 class="section-title">Tren Keterlambatan Pembayaran</h2>
+                        <p class="section-subtitle">Persentase keterlambatan nasabah bulanan</p>
+                    </div>
+                    <div style="font-size: 0.8rem; font-weight: 600; color: #6b7280;">6 Bulan Terakhir ▾</div>
+                </div>
+                
+                <div data-payment-summary style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-height:180px;align-items:center;background:#f9fafb;border-radius:8px;padding:20px;box-sizing:border-box;">Memuat data pembayaran...</div>
+            </div>
+
+            <!-- PANEL KANAN (DAFTAR RISIKO) -->
+            <div class="side-container">
+                <h2 class="section-title">Pekerjaan Risiko Tertinggi</h2>
+                <p class="section-subtitle">Berdasarkan rasio NPL per sektor</p>
+
+                <div class="risk-list" data-risk-list><p>Memuat data pekerjaan...</p></div>
+
+                <button class="btn-text" style="width: 100%; text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    Lihat Semua Data Pekerjaan
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+    <!-- MAIN CONTENT END -->
+
+<script src="app.js"></script>
+</body>
+</html>

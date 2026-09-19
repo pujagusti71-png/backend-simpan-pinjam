@@ -1,0 +1,1 @@
+ALTER TABLE "Nasabah" ADD COLUMN IF NOT EXISTS "tanggalLahir" TIMESTAMP(3);
