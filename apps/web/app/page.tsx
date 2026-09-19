@@ -5,6 +5,7 @@ import { Area, AreaChart, CartesianGrid, Pie, PieChart, ResponsiveContainer, Too
 import { Wallet, PiggyBank, PieChart as PieIcon, Users, TrendingUp, ChevronDown } from 'lucide-react'
 
 import { api } from '@/lib/api'
+import OriginalDashboard from '@/components/original-dashboard'
 
 const defaultAreaData = [
   { month: "Des '24", value: 1.8 },
@@ -99,9 +100,11 @@ export default function Page() {
     void loadDashboard()
   }, [])
 
+  return <OriginalDashboard metrics={metrics} areaData={areaData} />
+
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-screen bg-[#f8f9fa] px-10 py-10 text-slate-900">
+      <div className="space-y-8">
         <header className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Dashboard</h2>
           <p className="mt-2 text-slate-500">Ringkasan kinerja pinjaman dan simpanan</p>

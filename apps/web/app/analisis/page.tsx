@@ -1,11 +1,41 @@
+"use client"
+
+import { useEffect, useState } from 'react'
+import { api } from '@/lib/api'
+
 export default function AnalisisPage() {
-  const rows = [
-    { nama: 'Budi Santoso', penghasilan: 'Rp 6.500.000', cicilan: 'Rp 1.500.000', rasio: '23%', risiko: 'Rendah' },
-    { nama: 'Siti Aisyah', penghasilan: 'Rp 4.200.000', cicilan: 'Rp 1.450.000', rasio: '35%', risiko: 'Sedang' },
-    { nama: 'Agus Pratama', penghasilan: 'Rp 8.000.000', cicilan: 'Rp 4.400.000', rasio: '55%', risiko: 'Tinggi' },
-    { nama: 'Dewi Lestari', penghasilan: 'Rp 5.700.000', cicilan: 'Rp 1.300.000', rasio: '23%', risiko: 'Rendah' },
-    { nama: 'Rian Pratama', penghasilan: 'Rp 3.800.000', cicilan: 'Rp 1.450.000', rasio: '38%', risiko: 'Sedang' },
-  ]
+  const [rows, setRows] = useState<Array<{ nama: string; penghasilan: number; cicilan: number; rasio: number; risiko: string }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.getAnalisisRisiko()
+      .then((data) => {
+        const items = Array.isArray(data) ? data : []
+        setRows(items.map((item: any) => {
+          const penghasilan = Number(item.penghasilan || 0)
+          const cicilan = Number(item.cicilan || item.cicilanBulanan || 0)
+          const rasio = penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0
+          return {
+            nama: item.namaNasabah || item.nama || 'Nasabah',
+            penghasilan,
+            cicilan,
+            rasio,
+            risiko: item.status || item.risiko || 'Review',
+          }
+        }))
+      })
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const formatCurrency = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
+  const low = rows.filter((row) => row.risiko.toLowerCase().includes('rendah') || row.risiko.toLowerCase().includes('layak')).length
+  const medium = rows.filter((row) => row.risiko.toLowerCase().includes('sedang') || row.risiko.toLowerCase().includes('review')).length
+  const high = Math.max(0, rows.length - low - medium)
+  const total = Math.max(rows.length, 1)
+  const lowPercent = Math.round((low / total) * 100)
+  const mediumPercent = Math.round((medium / total) * 100)
+  const highPercent = Math.max(0, 100 - lowPercent - mediumPercent)
 
   return (
     <div className="min-h-screen bg-slate-900 px-6 py-8 text-slate-100">
@@ -19,15 +49,15 @@ export default function AnalisisPage() {
         <section className="grid gap-3 xl:grid-cols-3">
           <div className="rounded-3xl border border-slate-700 bg-slate-800 p-4">
             <p className="text-sm font-semibold text-slate-400">Risiko Rendah</p>
-            <p className="mt-4 text-lg font-bold text-emerald-400">45 nasabah</p>
+            <p className="mt-4 text-lg font-bold text-emerald-400">{low} nasabah</p>
           </div>
           <div className="rounded-3xl border border-slate-700 bg-slate-800 p-4">
             <p className="text-sm font-semibold text-slate-400">Risiko Sedang</p>
-            <p className="mt-4 text-lg font-bold text-amber-300">28 nasabah</p>
+            <p className="mt-4 text-lg font-bold text-amber-300">{medium} nasabah</p>
           </div>
           <div className="rounded-3xl border border-slate-700 bg-slate-800 p-4">
             <p className="text-sm font-semibold text-slate-400">Risiko Tinggi</p>
-            <p className="mt-4 text-lg font-bold text-rose-400">12 nasabah</p>
+            <p className="mt-4 text-lg font-bold text-rose-400">{high} nasabah</p>
           </div>
         </section>
 
@@ -38,17 +68,17 @@ export default function AnalisisPage() {
               <h2 className="mt-3 text-sm font-semibold text-slate-100">Komposisi risiko nasabah</h2>
             </div>
             <div className="space-y-2 text-right text-slate-300">
-              <p className="text-sm">Rendah 53%</p>
-              <p className="text-sm">Sedang 33%</p>
-              <p className="text-sm">Tinggi 14%</p>
+              <p className="text-sm">Rendah {lowPercent}%</p>
+              <p className="text-sm">Sedang {mediumPercent}%</p>
+              <p className="text-sm">Tinggi {highPercent}%</p>
             </div>
           </div>
 
           <div className="rounded-3xl bg-slate-900 p-1">
             <div className="flex h-10 overflow-hidden rounded-3xl bg-slate-700">
-              <div className="h-full bg-emerald-400" style={{ width: '53%' }} />
-              <div className="h-full bg-amber-300" style={{ width: '33%' }} />
-              <div className="h-full bg-rose-400" style={{ width: '14%' }} />
+              <div className="h-full bg-emerald-400" style={{ width: `${lowPercent}%` }} />
+              <div className="h-full bg-amber-300" style={{ width: `${mediumPercent}%` }} />
+              <div className="h-full bg-rose-400" style={{ width: `${highPercent}%` }} />
             </div>
           </div>
         </section>
@@ -71,20 +101,20 @@ export default function AnalisisPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => {
+                {loading ? <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Memuat data...</td></tr> : rows.length === 0 ? <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Belum ada data analisis.</td></tr> : rows.map((row) => {
                   const badgeClasses =
                     row.risiko === 'Rendah'
                       ? 'bg-emerald-400 text-slate-950'
                       : row.risiko === 'Sedang'
-                      ? 'bg-amber-300 text-slate-950'
-                      : 'bg-rose-400 text-slate-950'
+                        ? 'bg-amber-300 text-slate-950'
+                        : 'bg-rose-400 text-slate-950'
 
                   return (
                     <tr key={row.nama} className="border-b border-slate-700 last:border-b-0">
                       <td className="px-3 py-2 font-medium text-slate-100">{row.nama}</td>
-                      <td className="px-3 py-2 text-slate-300">{row.penghasilan}</td>
-                      <td className="px-3 py-2 text-slate-300">{row.cicilan}</td>
-                      <td className="px-3 py-2 text-slate-300">{row.rasio}</td>
+                      <td className="px-3 py-2 text-slate-300">{formatCurrency(row.penghasilan)}</td>
+                      <td className="px-3 py-2 text-slate-300">{formatCurrency(row.cicilan)}</td>
+                      <td className="px-3 py-2 text-slate-300">{row.rasio.toFixed(1)}%</td>
                       <td className="px-3 py-2">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${badgeClasses}`}>
                           {row.risiko}

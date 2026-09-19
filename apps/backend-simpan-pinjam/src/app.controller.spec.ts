@@ -15,8 +15,15 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return the API status payload', () => {
+      expect(appController.getHello()).toEqual(
+        expect.objectContaining({
+          message: 'Welcome to Simpan Pinjam Backend API',
+          version: '1.0',
+          documentation: '/api',
+          status: 'running',
+        }),
+      );
     });
   });
 });

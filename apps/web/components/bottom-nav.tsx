@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Banknote, PiggyBank, FileBarChart } from 'lucide-react'
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/pinjaman', label: 'Pinjaman', icon: Banknote },
   { href: '/simpanan', label: 'Simpanan', icon: PiggyBank },
   { href: '/laporan', label: 'Laporan', icon: FileBarChart },
@@ -25,11 +25,10 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 rounded-full px-4 py-1 transition ${
-                isActive
+              className={`flex items-center gap-2 rounded-full px-4 py-1 transition ${isActive
                   ? 'border border-teal-100 bg-teal-50/50 text-teal-600'
                   : 'text-slate-400 hover:text-teal-600'
-              }`}
+                }`}
             >
               <Icon className="h-5 w-5" />
               <span className={`text-sm font-medium ${isActive ? 'font-semibold' : ''}`}>

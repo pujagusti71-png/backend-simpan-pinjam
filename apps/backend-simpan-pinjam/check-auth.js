@@ -1,8 +1,9 @@
 const fetch = globalThis.fetch || require('node-fetch');
+const API_URL = process.env.API_URL || 'http://localhost:8003';
 
 (async () => {
     try {
-        const loginRes = await fetch('http://localhost:8000/auth/login', {
+        const loginRes = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: 'admin', password: 'admin123' }),
@@ -14,7 +15,7 @@ const fetch = globalThis.fetch || require('node-fetch');
 
         if (loginRes.ok) {
             const token = JSON.parse(loginBody).access_token;
-            const nasabahRes = await fetch('http://localhost:8000/nasabah', {
+            const nasabahRes = await fetch(`${API_URL}/nasabah`, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
             });

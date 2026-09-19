@@ -20,7 +20,7 @@ export default function LoginPage() {
       const token = res?.token || res?.access_token
       if (!token) throw new Error('Token tidak ditemukan di response')
       setToken(token)
-      router.push('/')
+      router.push('/dashboard')
     } catch (err: any) {
       setError(err?.message || 'Login gagal, coba lagi')
     } finally {
@@ -39,7 +39,13 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 mt-1">Masuk ke dashboard admin</p>
         </div>
 
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleLogin()
+          }}
+        >
           <div>
             <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Username</label>
             <div className="relative">
@@ -63,9 +69,6 @@ export default function LoginPage() {
                 placeholder="Masukkan password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleLogin()
-                }}
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
@@ -79,17 +82,15 @@ export default function LoginPage() {
           ) : null}
 
           <button
-            type="button"
-            onClick={handleLogin}
+            type="submit"
             disabled={loading}
-            className={`w-full flex items-center justify-center bg-teal-600 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-              loading ? 'opacity-80 cursor-not-allowed hover:bg-teal-600' : 'hover:bg-teal-700'
-            }`}
+            className={`w-full flex items-center justify-center bg-teal-600 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors ${loading ? 'opacity-80 cursor-not-allowed hover:bg-teal-600' : 'hover:bg-teal-700'
+              }`}
           >
             {loading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
             {loading ? 'Memproses...' : 'Masuk'}
           </button>
-        </div>
+        </form>
       </div>
     </div>
   )

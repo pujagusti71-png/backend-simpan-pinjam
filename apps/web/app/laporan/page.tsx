@@ -6,6 +6,7 @@ import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tool
 import { FileText, Users, BarChart2, Zap, UsersRound, ChevronDown } from 'lucide-react'
 
 import { apiFetch } from '@/lib/api'
+import OriginalLaporan from '@/components/original-laporan'
 
 const actionCards = [
   {
@@ -156,9 +157,11 @@ export default function LaporanPage() {
     tingkatKeterlambatan: riskJobs.length > 0 ? Math.round(riskJobs.reduce((sum, item) => sum + item.value, 0) / riskJobs.length) : 0,
   }), [lineData, riskJobs])
 
+  return <OriginalLaporan riskJobs={riskJobs} lineData={lineData} />
+
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-screen bg-[#f8f9fa] px-10 py-10 text-slate-900">
+      <div className="space-y-8">
         <header className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Laporan & Analitik</h2>
           <p className="mt-2 text-slate-500">Lihat laporan dan analisis data untuk pengambilan keputusan</p>

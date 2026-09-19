@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 
 import { api } from '@/lib/api'
+import OriginalPinjaman from '@/components/original-pinjaman'
 
 const actionCards = [
   {
@@ -147,7 +148,7 @@ export default function PinjamanPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState<NasabahDetail | null>(null)
+  const [editForm, setEditForm] = useState<NasabahDetail>({} as NasabahDetail)
 
   useEffect(() => {
     const loadPinjaman = async () => {
@@ -229,15 +230,11 @@ export default function PinjamanPage() {
 
   const closeEditModal = () => {
     setIsEditOpen(false)
-    setEditForm(null)
+    setEditForm({} as NasabahDetail)
   }
 
   const openPengajuanModal = () => {
     setIsPengajuanOpen(true)
-  }
-
-  const closePengajuanModal = () => {
-    setIsPengajuanOpen(false)
   }
 
   const openAllPengajuanModal = () => {
@@ -448,7 +445,7 @@ export default function PinjamanPage() {
         )
       )
       setIsEditOpen(false)
-      setEditForm(null)
+      setEditForm({} as NasabahDetail)
       alert('Data berhasil diperbarui!')
     } catch (error) {
       console.error('Gagal memperbarui pengajuan', error)
@@ -500,11 +497,37 @@ export default function PinjamanPage() {
     return 'bg-red-500'
   }
 
+  return (
+    <>
+      <OriginalPinjaman
+        rows={pengajuanList.map((row) => ({
+          id: row.id,
+          nama: row.nama,
+          pekerjaan: row.pekerjaan,
+          jumlah: row.jumlah,
+          tenor: row.tenor,
+          risiko: row.risiko,
+          rekomendasi: row.rekomendasi,
+        }))}
+        onNew={openPengajuanModal}
+        onSelect={(id) => {
+          const row = pengajuanList.find((item) => item.id === id)
+          if (row) openModal(row)
+        }}
+        isNewOpen={isPengajuanOpen}
+        form={pengajuanForm}
+        onFormChange={(key, value) => setPengajuanForm((current) => ({ ...current, [key]: value }))}
+        onSubmit={handleCreatePengajuan}
+        onCancel={() => setIsPengajuanOpen(false)}
+      />
+    </>
+  )
+
   const nasabahInfo = selectedNasabah!
 
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-screen bg-[#f8f9fa] px-10 py-10 text-slate-900">
+      <div className="space-y-8">
         <header className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Pinjaman</h2>
           <p className="mt-2 text-slate-500">Kelola pengajuan, analisis risiko, dan pembayaran pinjaman</p>
@@ -816,15 +839,15 @@ export default function PinjamanPage() {
       ) : null}
 
       {isPengajuanOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4 py-10 animate-fade-in">
-          <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl animate-zoom-in">
+        <div className="fixed inset-0 z-[100] isolate flex items-center justify-center bg-slate-900/50 px-4 py-10 backdrop-blur-sm animate-fade-in">
+          <div className="relative z-[101] w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl animate-zoom-in">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-6">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Pengajuan Pinjaman Baru</h2>
               </div>
               <button
                 type="button"
-                onClick={closePengajuanModal}
+                onClick={() => setIsPengajuanOpen(false)}
                 className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
               >
                 <X className="h-5 w-5" />
@@ -1187,7 +1210,7 @@ export default function PinjamanPage() {
             <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50 p-6">
               <button
                 type="button"
-                onClick={closePengajuanModal}
+                onClick={() => setIsPengajuanOpen(false)}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
               >
                 Batal

@@ -1,9 +1,10 @@
 const http = require('http');
+const API_PORT = Number(process.env.API_PORT || 8003);
 
 // Login first
 const loginReq = {
     hostname: 'localhost',
-    port: 8000,
+    port: API_PORT,
     path: '/auth/login',
     method: 'POST',
     headers: { 'Content-Type': 'application/json' }
@@ -33,7 +34,7 @@ loginPromise.then(token => {
     // Get pinjaman
     const pinjamanReq = {
         hostname: 'localhost',
-        port: 8000,
+        port: API_PORT,
         path: '/pinjaman',
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` }

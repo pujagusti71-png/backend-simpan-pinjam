@@ -3,19 +3,35 @@ const DEV_ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' }
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('sp_token')
+
+  try {
+    return sessionStorage.getItem('sp_token')
+  } catch {
+    return null
+  }
 }
 
 export function setToken(token: string): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem('sp_token', token)
-  document.cookie = `sp_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}`
+
+  try {
+    sessionStorage.setItem('sp_token', token)
+  } catch {
+    // ignore storage issues in private/incognito modes
+  }
+
+  localStorage.removeItem('sp_token')
+  document.cookie = `sp_token=${token}; path=/; SameSite=Lax`
 }
 
 export function removeToken(): void {
   if (typeof window === 'undefined') return
+
+  sessionStorage.removeItem('sp_token')
   localStorage.removeItem('sp_token')
-  document.cookie = 'sp_token=; path=/; max-age=0'
+
+  document.cookie = 'sp_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+  document.cookie = 'sp_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; domain=' + window.location.hostname
 }
 
 async function parseResponseBody(res: Response) {

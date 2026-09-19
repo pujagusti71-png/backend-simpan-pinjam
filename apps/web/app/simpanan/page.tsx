@@ -6,6 +6,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { Database, ArrowLeftRight, BookOpen, Landmark, TrendingUp } from 'lucide-react'
 
 import { apiFetch } from '@/lib/api'
+import OriginalSimpanan from '@/components/original-simpanan'
 
 const actionCards = [
   {
@@ -42,6 +43,7 @@ const formatCurrency = (value: number) =>
   }).format(value || 0)
 
 export default function SimpananPage() {
+  const [designRows, setDesignRows] = useState<Array<[string, string, string, string, string, string, string, string]>>([])
   const [totalBalance, setTotalBalance] = useState(0)
   const [growth, setGrowth] = useState(0)
   const [ldr, setLdr] = useState(0)
@@ -61,6 +63,14 @@ export default function SimpananPage() {
         const nasabahList = Array.isArray(nasabah) ? nasabah : []
         const pinjamanList = Array.isArray(pinjaman) ? pinjaman : []
         const simpananList = Array.isArray(simpanan) ? simpanan : []
+
+        const liveRows = simpananList.slice(0, 4).map((item: any, index: number) => {
+          const nama = item?.nasabah?.nama ?? item?.nama ?? `Nasabah ${index + 1}`
+          const initials = nama.split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase()
+          const saldo = Number(item?.saldoAkhir ?? item?.saldo ?? 0)
+          return [initials, nama, item?.nasabah?.statusKeanggotaan ?? 'Anggota', item?.noRekening ?? `SP-${index + 1}`, item?.jenisSimpanan ?? 'Simpanan Sukarela', formatCurrency(saldo), saldo > 0 ? 'AKTIF' : 'TIDAK AKTIF', 'blue'] as [string, string, string, string, string, string, string, string]
+        })
+        setDesignRows(liveRows)
 
         const total = simpananList.reduce((sum: number, item: any) => sum + Number(item?.saldoAkhir || 0), 0)
         const deposit = simpananList.reduce((sum: number, item: any) => sum + Number(item?.jumlahSetoran > 0 ? item.jumlahSetoran : 0), 0)
@@ -107,9 +117,11 @@ export default function SimpananPage() {
     return data
   }, [totalBalance])
 
+  return <OriginalSimpanan rows={designRows} />
+
   return (
-    <div className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="min-h-screen bg-[#f8f9fa] px-10 py-10 text-slate-900">
+      <div className="space-y-8">
         <header className="mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Simpanan</h2>
           <p className="mt-2 text-slate-500">Kelola data simpanan dan pantau kesehatan dana</p>

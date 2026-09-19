@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { BarChart3, Calendar, ChevronDown, User, LogIn, Settings } from 'lucide-react'
+import { BarChart3, Calendar, ChevronDown, User, LogIn, LogOut, Settings } from 'lucide-react'
 import { getToken, removeToken } from '@/lib/api'
+import { APP_USER, getUserInitials } from '@/lib/user'
 
 export default function Header() {
   const router = useRouter()
@@ -11,6 +12,11 @@ export default function Header() {
   const [isDateOpen, setIsDateOpen] = useState(false)
   const [isUserOpen, setIsUserOpen] = useState(false)
   const token = getToken()
+  const handleLogout = () => {
+    removeToken()
+    setIsUserOpen(false)
+    router.push('/login')
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm">
@@ -21,7 +27,7 @@ export default function Header() {
           </div>
           <div>
             <p className="text-base font-bold text-slate-900">Simpan Pinjam</p>
-            <p className="text-xs text-slate-500">Data Analyst</p>
+            <p className="text-xs text-slate-500">{APP_USER.role}</p>
           </div>
         </div>
 
@@ -56,13 +62,18 @@ export default function Header() {
           </div>
 
           <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsUserOpen((open) => !open)}
-              className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-slate-400 shadow-sm"
-            >
-              <User className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="max-w-[140px] truncate text-xs font-semibold text-slate-800 sm:max-w-none sm:text-sm">{APP_USER.name}</span>
+              <button
+                type="button"
+                onClick={() => setIsUserOpen((open) => !open)}
+                aria-label="Buka menu akun"
+                title="Menu akun"
+                className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-slate-600 shadow-sm text-xs font-bold"
+              >
+                {getUserInitials(APP_USER.name)}
+              </button>
+            </div>
             {isUserOpen ? (
               <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                 {!token ? (
@@ -79,6 +90,10 @@ export default function Header() {
                   </button>
                 ) : (
                   <>
+                    <div className="border-b border-slate-100 px-4 py-3">
+                      <p className="text-sm font-semibold text-slate-900">{APP_USER.name}</p>
+                      <p className="text-xs text-slate-500">{APP_USER.role}</p>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -104,13 +119,10 @@ export default function Header() {
                     <div className="my-1 border-t border-slate-100" />
                     <button
                       type="button"
-                      onClick={() => {
-                        removeToken()
-                        setIsUserOpen(false)
-                        router.push('/login')
-                      }}
+                      onClick={handleLogout}
                       className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-500 transition hover:bg-slate-50"
                     >
+                      <LogOut className="h-4 w-4" />
                       Keluar
                     </button>
                   </>
