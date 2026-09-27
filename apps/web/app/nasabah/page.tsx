@@ -43,6 +43,13 @@ type Nasabah = {
   risiko?: 'Rendah' | 'Sedang' | 'Tinggi'
 }
 
+type ProcessedNasabah = Nasabah & {
+  rasio: number
+  risiko: 'Rendah' | 'Sedang' | 'Tinggi'
+  biStatusLabel: string
+  biBadgeClass: string
+}
+
 type NasabahForm = {
   nama: string
   nik: string
@@ -195,7 +202,7 @@ const initialForm: NasabahForm = {
 export default function NasabahPage() {
   const [nasabahList, setNasabahList] = useState<Nasabah[]>(defaultSampleNasabah)
   const [form, setForm] = useState<NasabahForm>(initialForm)
-  const [selectedNasabah, setSelectedNasabah] = useState<Nasabah | null>(null)
+  const [selectedNasabah, setSelectedNasabah] = useState<ProcessedNasabah | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRisiko, setFilterRisiko] = useState('Semua')
   const [submitState, setSubmitState] = useState<SubmitState>({ isSubmitting: false, message: null, error: null })
@@ -404,9 +411,9 @@ export default function NasabahPage() {
           ? 'bg-amber-50 text-amber-700 border-amber-200'
           : 'bg-red-50 text-red-700 border-red-200'
 
-      return { ...item, rasio: rounded, risiko: risiko as 'Rendah' | 'Sedang' | 'Tinggi', biStatusLabel, biBadgeClass }
+      return { ...item, rasio: rounded, risiko: risiko as 'Rendah' | 'Sedang' | 'Tinggi', biStatusLabel, biBadgeClass } as ProcessedNasabah
     })
-  }, [nasabahList])
+  }, [nasabahList]) as ProcessedNasabah[]
 
   const filteredRows = useMemo(() => {
     return processedRows.filter((item) => {
