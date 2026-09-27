@@ -7,6 +7,7 @@
     "dev": "turbo dev",
     "start": "npm run start:backend",
     "start:dev": "npm run start:backend",
+    "start:prod": "npm --workspace apps/backend-simpan-pinjam run start:prod",
     "start:backend": "npm --workspace apps/backend-simpan-pinjam run start:dev",
     "start:web": "npm --workspace apps/web run dev -- --port 3003",
     "dev:all": "concurrently --success never \"npm run start:backend\" \"npm run start:web\" \"npm run open-browser\"",
