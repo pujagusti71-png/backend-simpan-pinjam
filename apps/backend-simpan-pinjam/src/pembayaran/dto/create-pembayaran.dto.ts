@@ -17,4 +17,19 @@ export class CreatePembayaranDto {
         type: String,
     })
     dariTanggalSeharusnya?: string | Date;
+
+    @ApiProperty({ required: false, example: 1, description: 'Nomor urut cicilan' })
+    nomorCicilan?: number;
+
+    @ApiProperty({ required: false, example: 100000, description: 'Jumlah pokok pembayaran' })
+    jumlahPokok?: number;
+
+    @ApiProperty({ required: false, example: 50000, description: 'Jumlah bunga pembayaran' })
+    jumlahBunga?: number;
+
+    @ApiProperty({ required: false, description: 'Tanggal pembayaran' })
+    tanggalPembayaran?: string | Date;
+
+    @ApiProperty({ required: false, description: 'Tanggal bayar' })
+    tanggalBayar?: string | Date;
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePeminjamanEksternalDto } from './dto/create-peminjamaneksternal.dto';
 import { AnalisisRisikoService } from '../analisis-risiko/analisis-risiko.service';
@@ -46,5 +46,63 @@ export class PeminjamanEksternalService {
         });
 
         return result._sum.jumlahPinjaman || 0;
+    }
+
+    async getBICheckingSummary(nasabahId: number) {
+        const nasabah = await this.prisma.nasabah.findUnique({
+            where: { id: nasabahId },
+            select: { id: true, nama: true, nik: true },
+        });
+        if (!nasabah) {
+            throw new NotFoundException(`Nasabah ID ${nasabahId} tidak ditemukan`);
+        }
+
+        const eksternalList = await this.prisma.peminjamanEksternal.findMany({
+            where: { nasabahId },
+        });
+
+        const totalJumlahEksternal = eksternalList.reduce(
+            (sum, e) => sum + Number(e.jumlahPinjaman ?? 0),
+            0,
+        );
+        const kolektibilitasList = eksternalList.map((e) => e.kolektibilitas);
+        const pernahMacet = eksternalList.some((e) => {
+            const kol = String(e.kolektibilitas || '').toLowerCase();
+            return (
+                kol.includes('macet') ||
+                kol.includes('diragukan') ||
+                kol.includes('kurang lancar') ||
+                ['3', '4', '5'].includes(kol)
+            );
+        });
+        const statusBI = pernahMacet ? 'bermasalah' : 'aman';
+
+        let catatan: string | null = null;
+        const macetEntries = eksternalList
+            .filter((e) => {
+                const kol = String(e.kolektibilitas || '').toLowerCase();
+                return (
+                    kol.includes('macet') ||
+                    kol.includes('diragukan') ||
+                    kol.includes('kurang lancar') ||
+                    ['3', '4', '5'].includes(kol)
+                );
+            })
+            .map((e) => `${e.sumberPinjaman} (Kolektibilitas ${e.kolektibilitas})`);
+        if (macetEntries.length > 0) {
+            catatan = `Pinjaman bermasalah: ${macetEntries.join(', ')}`;
+        }
+
+        return {
+            nasabahId,
+            nama: nasabah.nama,
+            nik: nasabah.nik,
+            totalPinjamanAktif: eksternalList.length,
+            totalJumlahEksternal,
+            statusBI,
+            pernahMacet,
+            kolektibilitasList,
+            catatan,
+        };
     }
 }
