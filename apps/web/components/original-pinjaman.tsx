@@ -63,9 +63,15 @@ export default function OriginalPinjaman({
     onCancel: () => void
 }) {
     const [risk, setRisk] = useState("Semua Risiko")
-    const visibleRows = rows.filter(
-        (row) => risk === "Semua Risiko" || row.risiko.toLowerCase() === risk.toLowerCase()
-    )
+    const [statusFilter, setStatusFilter] = useState("Semua Status")
+    const [tenorFilter, setTenorFilter] = useState("Semua Tenor")
+
+    const visibleRows = rows.filter((row) => {
+        const matchRisk = risk === "Semua Risiko" || row.risiko.toLowerCase() === risk.toLowerCase()
+        const matchStatus = statusFilter === "Semua Status" || row.rekomendasi.toLowerCase() === statusFilter.toLowerCase()
+        const matchTenor = tenorFilter === "Semua Tenor" || String(row.tenor) === tenorFilter
+        return matchRisk && matchStatus && matchTenor
+    })
     const exportData = () => {
         const csv = [
             ["Nama", "Pekerjaan", "Jumlah", "Tenor", "Risiko", "Rekomendasi"],
@@ -124,14 +130,28 @@ export default function OriginalPinjaman({
                         </label>
                         <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 uppercase">
                             Status Pinjaman
-                            <select className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case">
-                                <option>Semua Status</option>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case"
+                            >
+                                <option value="Semua Status">Semua Status</option>
+                                <option value="Approve">Approve</option>
+                                <option value="Review">Review</option>
+                                <option value="Reject">Reject</option>
                             </select>
                         </label>
                         <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 uppercase">
                             Tenor
-                            <select className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case">
-                                <option>Semua Tenor</option>
+                            <select
+                                value={tenorFilter}
+                                onChange={(e) => setTenorFilter(e.target.value)}
+                                className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case"
+                            >
+                                <option value="Semua Tenor">Semua Tenor</option>
+                                <option value="12">12 Bulan</option>
+                                <option value="18">18 Bulan</option>
+                                <option value="24">24 Bulan</option>
                             </select>
                         </label>
                         <div className="flex-1">

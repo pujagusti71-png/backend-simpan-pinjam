@@ -16,8 +16,13 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Simpan Pinjam',
+  title: 'Koperasi Simpan Pinjam',
   description: 'Sistem manajemen Simpan Pinjam',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -134,16 +134,6 @@ export default function Header() {
                                         <Settings className="h-4 w-4 text-slate-400" />
                                         Pengaturan
                                     </button>
-                                    <div className="border-t border-slate-100" />
-                                    <button
-                                        id="header-logout-btn"
-                                        type="button"
-                                        onClick={handleLogout}
-                                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-500 transition hover:bg-red-50"
-                                    >
-                                        <LogOut className="h-4 w-4" />
-                                        Keluar
-                                    </button>
                                 </div>
                             )}
                         </div>
