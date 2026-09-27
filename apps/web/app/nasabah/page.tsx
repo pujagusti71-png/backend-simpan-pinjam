@@ -1,7 +1,19 @@
 'use client'
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-
+import {
+  Users,
+  Search,
+  Plus,
+  Eye,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Shield,
+  Filter,
+  X,
+  UserCheck,
+} from 'lucide-react'
 import { api } from '@/lib/api'
 
 type Nasabah = {
@@ -53,22 +65,110 @@ type NasabahForm = {
   catatan: string
 }
 
-type UiState = {
-  isModalOpen: boolean
-  activeNasabahId: string | null
-  isDetailOpen: boolean
-  selectedNasabah: Nasabah | null
-}
-
 type SubmitState = {
   isSubmitting: boolean
   message: string | null
   error: string | null
 }
 
-const pekerjaanOptions = ['PNS', 'Wiraswasta', 'Freelance', 'Petani', 'Buruh', 'Lainnya']
+const pekerjaanOptions = ['PNS', 'Wiraswasta', 'Karyawan Swasta', 'Freelance', 'Petani', 'Buruh', 'Lainnya']
 const riwayatOptions: Nasabah['riwayat'][] = ['Lancar', 'Telat']
-const currencyFormatter = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 })
+const currencyFormatter = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+})
+
+const defaultSampleNasabah: Nasabah[] = [
+  {
+    id: '1',
+    nama: 'Samuel Santoso',
+    nik: '3174090123456789',
+    noRek: 'SP-00101',
+    hp: '081234567891',
+    email: 'samuel@example.com',
+    lahir: '1988-04-12',
+    alamat: 'Jl. Merdeka No. 45, Jakarta',
+    ibu: { nama: 'Siti Aminah', lahir: '1965-02-10', alamat: 'Jl. Merdeka No. 45, Jakarta' },
+    kerja: 'PNS',
+    gaji: 7500000,
+    cicilan: 1350000,
+    riwayat: 'Lancar',
+    slik: 'K1',
+    hutangLain: 0,
+    lembaga: 0,
+    tunggakan: false,
+    catatan: 'Profil risiko aman',
+    rasio: 18,
+    risiko: 'Rendah',
+  },
+  {
+    id: '2',
+    nama: 'Dewi Permata',
+    nik: '3275090123456789',
+    noRek: 'SP-00102',
+    hp: '081234567892',
+    email: 'dewi@example.com',
+    lahir: '1992-08-20',
+    alamat: 'Jl. Anggrek No. 12, Bandung',
+    ibu: { nama: 'Ratna Sari', lahir: '1968-11-15', alamat: 'Jl. Anggrek No. 12, Bandung' },
+    kerja: 'Freelance',
+    gaji: 6000000,
+    cicilan: 1500000,
+    riwayat: 'Lancar',
+    slik: 'K1',
+    hutangLain: 2000000,
+    lembaga: 1,
+    tunggakan: false,
+    catatan: 'Riwayat pembayaran baik',
+    rasio: 25,
+    risiko: 'Rendah',
+  },
+  {
+    id: '3',
+    nama: 'Ahmad Fauzi',
+    nik: '3374090123456789',
+    noRek: 'SP-00103',
+    hp: '081234567893',
+    email: 'ahmad@example.com',
+    lahir: '1985-12-05',
+    alamat: 'Jl. Diponegoro No. 88, Semarang',
+    ibu: { nama: 'Nurhayati', lahir: '1960-05-22', alamat: 'Jl. Diponegoro No. 88, Semarang' },
+    kerja: 'Wiraswasta',
+    gaji: 8500000,
+    cicilan: 2975000,
+    riwayat: 'Lancar',
+    slik: 'K2',
+    hutangLain: 5000000,
+    lembaga: 2,
+    tunggakan: false,
+    catatan: 'Perlu verifikasi rekening koran',
+    rasio: 35,
+    risiko: 'Sedang',
+  },
+  {
+    id: '4',
+    nama: 'Budi Santoso',
+    nik: '3578090123456789',
+    noRek: 'SP-00104',
+    hp: '081234567894',
+    email: 'budi@example.com',
+    lahir: '1990-03-14',
+    alamat: 'Jl. Pahlawan No. 21, Surabaya',
+    ibu: { nama: 'Endang Sulastri', lahir: '1966-09-08', alamat: 'Jl. Pahlawan No. 21, Surabaya' },
+    kerja: 'Buruh',
+    gaji: 4200000,
+    cicilan: 2310000,
+    riwayat: 'Telat',
+    slik: 'K3',
+    hutangLain: 8000000,
+    lembaga: 3,
+    tunggakan: true,
+    catatan: 'Terdapat riwayat tunggakan di lembaga lain',
+    rasio: 55,
+    risiko: 'Tinggi',
+  },
+]
 
 const initialForm: NasabahForm = {
   nama: '',
@@ -92,14 +192,14 @@ const initialForm: NasabahForm = {
   catatan: '',
 }
 
-const initialUiState: UiState = { isModalOpen: false, activeNasabahId: null, isDetailOpen: false, selectedNasabah: null }
-const initialSubmitState: SubmitState = { isSubmitting: false, message: null, error: null }
-
 export default function NasabahPage() {
-  const [nasabahList, setNasabahList] = useState<Nasabah[]>([])
+  const [nasabahList, setNasabahList] = useState<Nasabah[]>(defaultSampleNasabah)
   const [form, setForm] = useState<NasabahForm>(initialForm)
-  const [ui, setUi] = useState<UiState>(initialUiState)
-  const [submitState, setSubmitState] = useState<SubmitState>(initialSubmitState)
+  const [selectedNasabah, setSelectedNasabah] = useState<Nasabah | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterRisiko, setFilterRisiko] = useState('Semua')
+  const [submitState, setSubmitState] = useState<SubmitState>({ isSubmitting: false, message: null, error: null })
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
   const {
     nama,
@@ -123,9 +223,8 @@ export default function NasabahPage() {
     catatan,
   } = form
 
-  const setFormField = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value } as NasabahForm))
-  const setUiField = (field: string, value: any) => setUi((prev) => ({ ...prev, [field]: value }))
-  const { isModalOpen, activeNasabahId, isDetailOpen, selectedNasabah } = ui
+  const setFormField = (field: string, value: any) =>
+    setForm((prev) => ({ ...prev, [field]: value } as NasabahForm))
 
   const isNikValid = nik.length === 16 && /^[0-9]+$/.test(nik)
   const isFormValid =
@@ -140,46 +239,49 @@ export default function NasabahPage() {
     ibuLahir !== '' &&
     ibuAlamat.trim() !== '' &&
     Number(gaji) > 0 &&
-    Number(cicilan) >= 0 &&
-    Number(lembaga) >= 0 &&
-    Number(hutangLain) >= 0
+    Number(cicilan) >= 0
 
   useEffect(() => {
     const loadNasabah = async () => {
       try {
         const data = await api.getNasabah()
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           const mappedData = data.map((item: any) => ({
             id: String(item.id ?? crypto.randomUUID()),
             nama: item.nama ?? 'Nama belum tersedia',
             nik: item.nik ?? '',
-            noRek: item.noRek ?? item.rekening ?? '-',
+            noRek: item.noRek ?? item.rekening ?? item.noRekening ?? '-',
             hp: item.hp ?? item.noHp ?? '-',
             email: item.email ?? '-',
-            lahir: item.lahir ?? '-',
+            lahir: item.lahir ?? item.tanggalLahir ?? '-',
             alamat: item.alamat ?? '-',
             ibu: {
-              nama: item.ibu?.nama ?? item.ibuNama ?? '-',
-              lahir: item.ibu?.lahir ?? item.ibuLahir ?? '-',
-              alamat: item.ibu?.alamat ?? item.ibuAlamat ?? '-',
+              nama: item.ibu?.nama ?? item.ibuNama ?? item.namaIbu ?? '-',
+              lahir: item.ibu?.lahir ?? item.ibuLahir ?? item.tanggalLahirIbu ?? '-',
+              alamat: item.ibu?.alamat ?? item.ibuAlamat ?? item.alamatIbu ?? '-',
             },
             kerja: item.pekerjaan ?? item.kerja ?? 'Lainnya',
             gaji: Number(item.penghasilan ?? item.gaji ?? 0),
             cicilan: Number(item.cicilan ?? item.cicilanBulanan ?? 0),
-            riwayat: item.riwayatPembayaran === 'telat' ? 'Telat' : 'Lancar',
+            riwayat: item.riwayatPembayaran === 'telat' || item.riwayat === 'Telat' ? 'Telat' : 'Lancar',
             slik: item.slik ?? 'K1',
             hutangLain: Number(item.hutangLain ?? item.totalHutangLain ?? 0),
             lembaga: Number(item.lembaga ?? item.jumlahLembaga ?? 0),
             tunggakan: Boolean(item.tunggakan ?? item.adaTunggakan ?? false),
             catatan: item.catatan ?? item.keterangan ?? '',
-            rasio: Number(item.rasio ?? (Number(item.cicilan ?? item.cicilanBulanan ?? 0) > 0 && Number(item.penghasilan ?? item.gaji ?? 0) > 0 ? (Number(item.cicilan ?? item.cicilanBulanan ?? 0) / Number(item.penghasilan ?? item.gaji ?? 0)) * 100 : 0)),
+            rasio: Number(
+              item.rasio ??
+                (Number(item.cicilan ?? item.cicilanBulanan ?? 0) > 0 && Number(item.penghasilan ?? item.gaji ?? 0) > 0
+                  ? (Number(item.cicilan ?? item.cicilanBulanan ?? 0) / Number(item.penghasilan ?? item.gaji ?? 0)) * 100
+                  : 0)
+            ),
             risiko: item.risiko ?? 'Rendah',
           })) as Nasabah[]
 
           setNasabahList(mappedData)
         }
       } catch (error) {
-        console.error('Gagal memuat data nasabah', error)
+        console.error('Gagal memuat data nasabah, menggunakan data lokal default', error)
       }
     }
 
@@ -193,7 +295,7 @@ export default function NasabahPage() {
     setSubmitState({ isSubmitting: true, message: null, error: null })
 
     const payload = {
-      nama: nama.trim(),
+      nama,
       nik,
       noRek,
       hp,
@@ -214,14 +316,24 @@ export default function NasabahPage() {
 
     try {
       const created = await api.createNasabah(payload)
-      const savedNasabah = (created && typeof created === 'object' && 'id' in created
-        ? (created as Partial<Nasabah>)
-        : null) ?? {
-        id: crypto.randomUUID(),
-      }
+      const savedId = created && typeof created === 'object' && 'id' in created ? String((created as any).id) : String(Date.now())
+
+      const rasioVal = Number(gaji) > 0 ? (Number(cicilan) / Number(gaji)) * 100 : 0
+      const isHighBi = slik === 'K3' || slik === 'K4' || slik === 'K5'
+      const risikoVal = isHighBi
+        ? 'Tinggi'
+        : slik === 'K2'
+        ? rasioVal > 30
+          ? 'Tinggi'
+          : 'Sedang'
+        : rasioVal <= 30
+        ? 'Rendah'
+        : rasioVal <= 50
+        ? 'Sedang'
+        : 'Tinggi'
 
       const newNasabah: Nasabah = {
-        id: String(savedNasabah.id ?? crypto.randomUUID()),
+        id: savedId,
         nama: payload.nama,
         nik: payload.nik,
         noRek: payload.noRek,
@@ -239,11 +351,14 @@ export default function NasabahPage() {
         lembaga: payload.lembaga,
         tunggakan: payload.tunggakan,
         catatan: payload.catatan,
+        rasio: Number(rasioVal.toFixed(1)),
+        risiko: risikoVal,
       }
 
       setNasabahList((current) => [newNasabah, ...current])
       setForm({ ...initialForm })
-      setSubmitState({ isSubmitting: false, message: 'Data nasabah berhasil disimpan.', error: null })
+      setSubmitState({ isSubmitting: false, message: 'Data anggota berhasil ditambahkan!', error: null })
+      setIsFormOpen(false)
     } catch (error) {
       console.error('Gagal menyimpan data nasabah', error)
       const errorMessage = error instanceof Error ? error.message : 'Gagal menyimpan data nasabah.'
@@ -251,251 +366,333 @@ export default function NasabahPage() {
     }
   }
 
-  const rows = useMemo(
-    () =>
-      nasabahList.map((item) => {
-        const rasio = item.gaji > 0 ? (item.cicilan / item.gaji) * 100 : 0
-        const rounded = Number(rasio.toFixed(1))
-        const status = item.slik
-        const isHighBi = status === 'K3' || status === 'K4' || status === 'K5'
-        const risiko = isHighBi
+  const processedRows = useMemo(() => {
+    return nasabahList.map((item) => {
+      const rasio = item.gaji > 0 ? (item.cicilan / item.gaji) * 100 : 0
+      const rounded = Number(rasio.toFixed(1))
+      const status = item.slik
+      const isHighBi = status === 'K3' || status === 'K4' || status === 'K5'
+      const risiko = isHighBi
+        ? 'Tinggi'
+        : status === 'K2'
+        ? rounded > 30
           ? 'Tinggi'
+          : 'Sedang'
+        : status === 'K1'
+        ? rounded <= 30
+          ? 'Rendah'
+          : rounded <= 50
+          ? 'Sedang'
+          : 'Tinggi'
+        : 'Tinggi'
+
+      const biStatusLabel =
+        status === 'K1'
+          ? 'K1 (Lancar)'
           : status === 'K2'
-            ? rounded > 30
-              ? 'Tinggi'
-              : 'Sedang'
-            : status === 'K1'
-              ? rounded <= 30
-                ? 'Rendah'
-                : rounded <= 50
-                  ? 'Sedang'
-                  : 'Tinggi'
-              : 'Tinggi'
+          ? 'K2 (DPK)'
+          : status === 'K3'
+          ? 'K3 (Kurang Lancar)'
+          : status === 'K4'
+          ? 'K4 (Diragukan)'
+          : 'K5 (Macet)'
 
-        const biStatusLabel =
-          status === 'K1'
-            ? 'K1 Lancar'
-            : status === 'K2'
-              ? 'K2 DPK'
-              : status === 'K3'
-                ? 'K3 Kurang Lancar'
-                : status === 'K4'
-                  ? 'K4 Diragukan'
-                  : 'K5 Macet'
+      const biBadgeClass =
+        status === 'K1'
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          : status === 'K2'
+          ? 'bg-amber-50 text-amber-700 border-amber-200'
+          : 'bg-red-50 text-red-700 border-red-200'
 
-        const biBadgeClass =
-          status === 'K1'
-            ? 'bg-emerald-400 text-slate-950'
-            : status === 'K2'
-              ? 'bg-amber-400 text-slate-950'
-              : status === 'K3'
-                ? 'bg-orange-500 text-slate-950'
-                : status === 'K4'
-                  ? 'bg-rose-500 text-slate-950'
-                  : 'bg-rose-900 text-slate-100'
+      return { ...item, rasio: rounded, risiko, biStatusLabel, biBadgeClass }
+    })
+  }, [nasabahList])
 
-        return { ...item, rasio: rounded, risiko, biStatusLabel, biBadgeClass }
-      }),
-    [nasabahList],
-  )
-
-  const activeNasabah = selectedNasabah ?? (activeNasabahId ? rows.find((row) => row.id === activeNasabahId) || null : null)
-  const showDetail = isModalOpen && isDetailOpen && !!activeNasabah
+  const filteredRows = useMemo(() => {
+    return processedRows.filter((item) => {
+      const matchSearch =
+        item.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.nik.includes(searchTerm) ||
+        item.noRek.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.hp.includes(searchTerm)
+      const matchRisiko = filterRisiko === 'Semua' || item.risiko === filterRisiko
+      return matchSearch && matchRisiko
+    })
+  }, [processedRows, searchTerm, filterRisiko])
 
   return (
-    <div className="min-h-screen bg-slate-900 px-6 py-8 text-slate-100">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <header className="rounded-3xl border border-slate-700 bg-slate-800 p-4">
-          <p className="text-sm uppercase tracking-[0.2em] text-sky-400">Data Nasabah</p>
-          <h1 className="mt-3 text-xl font-semibold text-slate-100">Data Nasabah</h1>
-          <p className="mt-2 text-xs text-slate-400">Tambah atau lihat data nasabah di sini.</p>
-        </header>
+    <main className="min-h-screen bg-[#f8f9fa] p-4 sm:p-6 md:p-8 lg:p-10 text-slate-900">
+      {/* Header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="text-[0.85rem] font-medium text-slate-500">Master Data / Anggota</div>
+          <h1 className="my-1 text-2xl font-bold text-[#111]">Data Anggota (Nasabah)</h1>
+          <p className="m-0 text-[0.95rem] text-slate-500">
+            Kelola data identitas, profil keuangan, dan riwayat kredit anggota koperasi
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-800"
+          >
+            <Plus className="h-4 w-4" />
+            {isFormOpen ? 'Tutup Form' : 'Tambah Anggota Baru'}
+          </button>
+        </div>
+      </div>
 
-        <section className="grid gap-3 xl:grid-cols-[420px_1fr]">
-          <form onSubmit={handleSubmit} className="space-y-4 rounded-3xl border border-slate-700 bg-slate-800 p-4">
-            <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-4">
-              <div className="mb-4 border-b border-slate-700/50 pb-3">
-                <p className="text-sm font-semibold text-slate-100">Data Pribadi</p>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Nama Lengkap</label>
+      {/* Summary KPI Cards */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-slate-400">Total Anggota</span>
+            <div className="rounded-lg bg-green-50 p-2 text-green-600">
+              <Users className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{nasabahList.length}</div>
+          <p className="mt-1 text-xs text-slate-500">Terdaftar aktif di sistem</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-slate-400">Risiko Rendah</span>
+            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+              <Shield className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-600">
+            {processedRows.filter((r) => r.risiko === 'Rendah').length}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Kolektibilitas K1 Lancar</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-slate-400">Risiko Sedang</span>
+            <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
+              <Clock className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-amber-600">
+            {processedRows.filter((r) => r.risiko === 'Sedang').length}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Perlu monitoring rutin</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-slate-400">Risiko Tinggi / Telat</span>
+            <div className="rounded-lg bg-red-50 p-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-red-600">
+            {processedRows.filter((r) => r.risiko === 'Tinggi').length}
+          </div>
+          <p className="mt-1 text-xs text-slate-500">Perhatian khusus penagihan</p>
+        </div>
+      </div>
+
+      {/* Collapsible Form Tambah Anggota */}
+      {isFormOpen && (
+        <div className="mb-8 rounded-xl border border-slate-100 bg-white p-6 shadow-sm transition-all">
+          <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Form Pendaftaran Anggota Baru</h2>
+              <p className="text-sm text-slate-500">Lengkapi seluruh data pribadi, ibu kandung, dan data finansial nasabah.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 1. Data Pribadi */}
+            <div>
+              <h3 className="mb-3 text-sm font-bold text-green-800 uppercase tracking-wide">1. Data Pribadi</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Lengkap *</label>
                   <input
-                    value={nama}
-                    onChange={(event) => setFormField('nama', event.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Masukkan nama lengkap"
-                    required
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">NIK</label>
-                  <input
-                    value={nik}
-                    onChange={(event) => setFormField('nik', event.target.value)}
-                    maxLength={16}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="16 digit NIK"
-                    inputMode="numeric"
-                    pattern="[0-9]{16}"
-                    required
-                  />
-                  {!isNikValid && nik.length > 0 ? <p className="text-sm text-rose-400">NIK harus berisi 16 angka.</p> : null}
-                </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">No. Rekening</label>
-                  <input
-                    value={noRek}
-                    onChange={(event) => setFormField('noRek', event.target.value)}
                     type="text"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Contoh: 1234567890"
+                    value={nama}
+                    onChange={(e) => setFormField('nama', e.target.value)}
+                    placeholder="Contoh: Siti Rahmawati"
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">No. HP</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">NIK (16 Digit) *</label>
                   <input
-                    value={hp}
-                    onChange={(event) => setFormField('hp', event.target.value)}
+                    type="text"
+                    maxLength={16}
+                    value={nik}
+                    onChange={(e) => setFormField('nik', e.target.value)}
+                    placeholder="Contoh: 3174090123456789"
+                    required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                  {!isNikValid && nik.length > 0 && (
+                    <span className="text-[11px] text-red-500 mt-1 block">NIK harus 16 digit angka</span>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">No. Rekening *</label>
+                  <input
+                    type="text"
+                    value={noRek}
+                    onChange={(e) => setFormField('noRek', e.target.value)}
+                    placeholder="Contoh: SP-00105"
+                    required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">No. Handphone *</label>
+                  <input
                     type="tel"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    value={hp}
+                    onChange={(e) => setFormField('hp', e.target.value)}
                     placeholder="Contoh: 081234567890"
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Email</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Email *</label>
                   <input
-                    value={email}
-                    onChange={(event) => setFormField('email', event.target.value)}
                     type="email"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Contoh: email@domain.com"
+                    value={email}
+                    onChange={(e) => setFormField('email', e.target.value)}
+                    placeholder="Contoh: nasabah@email.com"
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Tanggal Lahir</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal Lahir *</label>
                   <input
+                    type="date"
                     value={lahir}
-                    onChange={(event) => setFormField('lahir', event.target.value)}
-                    type="date"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    onChange={(e) => setFormField('lahir', e.target.value)}
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-              </div>
-              <div className="space-y-3 mt-3">
-                <label className="block text-xs font-medium text-slate-200">Alamat</label>
-                <textarea
-                  value={alamat}
-                  onChange={(event) => setFormField('alamat', event.target.value)}
-                  rows={2}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                  placeholder="Alamat lengkap nasabah"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-4">
-              <div className="mb-4 border-b border-slate-700/50 pb-3">
-                <p className="text-sm font-semibold text-slate-100">Data Ibu Kandung</p>
-              </div>
-              <div className="space-y-3">
-                <label className="block text-xs font-medium text-slate-200">Nama Ibu Kandung</label>
-                <input
-                  value={ibuNama}
-                  onChange={(event) => setFormField('ibuNama', event.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                  placeholder="Nama ibu kandung"
-                  required
-                />
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 mt-3">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Tanggal Lahir Ibu Kandung</label>
-                  <input
-                    value={ibuLahir}
-                    onChange={(event) => setFormField('ibuLahir', event.target.value)}
-                    type="date"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    required
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Alamat Ibu Kandung</label>
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Alamat Lengkap *</label>
                   <textarea
-                    value={ibuAlamat}
-                    onChange={(event) => setFormField('ibuAlamat', event.target.value)}
                     rows={2}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Alamat ibu kandung"
+                    value={alamat}
+                    onChange={(e) => setFormField('alamat', e.target.value)}
+                    placeholder="Alamat domisili saat ini"
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-4">
-              <div className="mb-4 border-b border-slate-700/50 pb-3">
-                <p className="text-sm font-semibold text-slate-100">Data Pekerjaan & Keuangan</p>
+            {/* 2. Data Ibu Kandung */}
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="mb-3 text-sm font-bold text-green-800 uppercase tracking-wide">2. Data Ibu Kandung</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Nama Ibu Kandung *</label>
+                  <input
+                    type="text"
+                    value={ibuNama}
+                    onChange={(e) => setFormField('ibuNama', e.target.value)}
+                    placeholder="Nama lengkap ibu kandung"
+                    required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Tanggal Lahir Ibu *</label>
+                  <input
+                    type="date"
+                    value={ibuLahir}
+                    onChange={(e) => setFormField('ibuLahir', e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Alamat Ibu Kandung *</label>
+                  <input
+                    type="text"
+                    value={ibuAlamat}
+                    onChange={(e) => setFormField('ibuAlamat', e.target.value)}
+                    placeholder="Alamat tempat tinggal ibu"
+                    required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Pekerjaan</label>
+            </div>
+
+            {/* 3. Pekerjaan & Finansial */}
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="mb-3 text-sm font-bold text-green-800 uppercase tracking-wide">3. Pekerjaan & Data Finansial</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Pekerjaan</label>
                   <select
                     value={kerja}
-                    onChange={(event) => setFormField('kerja', event.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    onChange={(e) => setFormField('kerja', e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   >
-                    {pekerjaanOptions.map((option) => (
-                      <option key={option} value={option} className="bg-slate-900 text-slate-100">
-                        {option}
+                    {pekerjaanOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Penghasilan per bulan</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Penghasilan / Bln (Rp) *</label>
                   <input
+                    type="number"
+                    min="0"
+                    step="100000"
                     value={gaji}
-                    onChange={(event) => setFormField('gaji', event.target.value)}
-                    type="number"
-                    min="0"
-                    step="10000"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Contoh: 5000000"
+                    onChange={(e) => setFormField('gaji', e.target.value)}
+                    placeholder="Contoh: 6000000"
                     required
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2 mt-3">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Cicilan per bulan</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Cicilan / Bln (Rp)</label>
                   <input
-                    value={cicilan}
-                    onChange={(event) => setFormField('cicilan', event.target.value)}
                     type="number"
                     min="0"
-                    step="10000"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Contoh: 1500000"
-                    required
+                    step="50000"
+                    value={cicilan}
+                    onChange={(e) => setFormField('cicilan', e.target.value)}
+                    placeholder="Contoh: 1200000"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Riwayat</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Riwayat Pembayaran</label>
                   <select
                     value={riwayat}
-                    onChange={(event) => setFormField('riwayat', event.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    onChange={(e) => setFormField('riwayat', e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   >
-                    {riwayatOptions.map((option) => (
-                      <option key={option} value={option} className="bg-slate-900 text-slate-100">
-                        {option}
+                    {riwayatOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
                       </option>
                     ))}
                   </select>
@@ -503,20 +700,16 @@ export default function NasabahPage() {
               </div>
             </div>
 
-            <div className="rounded-3xl border border-slate-700 bg-slate-800/50 p-4">
-              <div className="mb-4 border-b border-slate-700/50 pb-3">
-                <p className="text-sm font-semibold text-slate-100">BI Checking</p>
-              </div>
-              <p className="mb-4 text-xs text-slate-300">
-                ?? BI Checking itu catatan hutang si nasabah di tempat lain. K1 paling bagus, K5 paling buruk.
-              </p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Status SLIK</label>
+            {/* 4. BI Checking / SLIK */}
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="mb-3 text-sm font-bold text-green-800 uppercase tracking-wide">4. Catatan SLIK / BI Checking</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Kolektibilitas SLIK</label>
                   <select
                     value={slik}
-                    onChange={(event) => setFormField('slik', event.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    onChange={(e) => setFormField('slik', e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   >
                     <option value="K1">K1 - Lancar</option>
                     <option value="K2">K2 - Dalam Perhatian Khusus</option>
@@ -525,231 +718,324 @@ export default function NasabahPage() {
                     <option value="K5">K5 - Macet</option>
                   </select>
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Jumlah Lembaga</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Hutang di Tempat Lain (Rp)</label>
                   <input
-                    value={lembaga}
-                    onChange={(event) => setFormField('lembaga', event.target.value)}
                     type="number"
                     min="0"
-                    step="1"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Jumlah lembaga kredit"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2 mt-3">
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Total Hutang di Lembaga Lain</label>
-                  <input
                     value={hutangLain}
-                    onChange={(event) => setFormField('hutangLain', event.target.value)}
-                    type="number"
-                    min="0"
-                    step="10000"
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                    placeholder="Contoh: 2500000"
-                    required
+                    onChange={(e) => setFormField('hutangLain', e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   />
                 </div>
-                <div className="space-y-3">
-                  <label className="block text-xs font-medium text-slate-200">Ada Tunggakan di Lembaga Lain?</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Jumlah Lembaga</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={lembaga}
+                    onChange={(e) => setFormField('lembaga', e.target.value)}
+                    placeholder="0"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Status Tunggakan</label>
                   <select
                     value={tunggakan}
-                    onChange={(event) => setFormField('tunggakan', event.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-100 outline-none transition focus:border-sky-400"
+                    onChange={(e) => setFormField('tunggakan', e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
                   >
-                    <option value="Tidak Ada">Tidak Ada</option>
+                    <option value="Tidak Ada">Tidak Ada Tunggakan</option>
                     <option value="Ada Tunggakan">Ada Tunggakan</option>
                   </select>
                 </div>
               </div>
-
-              <div className="space-y-3 mt-3">
-                <label className="block text-xs font-medium text-slate-200">Catatan BI Checking</label>
-                <textarea
-                  value={catatan}
-                  onChange={(event) => setFormField('catatan', event.target.value)}
-                  rows={2}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-sky-400"
-                  placeholder="Keterangan tambahan (opsional)"
-                />
-              </div>
             </div>
 
-            {submitState.error ? <p className="text-sm text-rose-400">{submitState.error}</p> : null}
-            {submitState.message ? <p className="text-sm text-emerald-400">{submitState.message}</p> : null}
-            <button
-              type="submit"
-              disabled={!isFormValid || submitState.isSubmitting}
-              className="inline-flex w-full items-center justify-center rounded-2xl bg-sky-400 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitState.isSubmitting ? 'Menyimpan...' : 'Simpan'}
-            </button>
+            {submitState.error && (
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{submitState.error}</div>
+            )}
+            {submitState.message && (
+              <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{submitState.message}</div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(false)}
+                className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={!isFormValid || submitState.isSubmitting}
+                className="rounded-lg bg-green-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-800 transition disabled:opacity-50"
+              >
+                {submitState.isSubmitting ? 'Menyimpan...' : 'Simpan Data Anggota'}
+              </button>
+            </div>
           </form>
+        </div>
+      )}
 
-          <div className="rounded-3xl border border-slate-700 bg-slate-800 p-4">
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm uppercase tracking-[0.2em] text-sky-400">Daftar Nasabah</p>
-                <h2 className="mt-2 text-sm font-semibold text-slate-100">Rekap data nasabah</h2>
-              </div>
-              <span className="rounded-full bg-slate-700 px-2 py-1 text-xs text-slate-300">Total {nasabahList.length}</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-separate border-spacing-0 text-left text-xs text-slate-100">
-                <thead className="bg-slate-900 text-slate-300">
-                  <tr>
-                    <th className="border-b border-slate-700 px-3 py-2">Nama</th>
-                    <th className="border-b border-slate-700 px-3 py-2">NIK</th>
-                    <th className="border-b border-slate-700 px-3 py-2">No. HP</th>
-                    <th className="border-b border-slate-700 px-3 py-2">No. Rekening</th>
-                    <th className="border-b border-slate-700 px-3 py-2">Pekerjaan</th>
-                    <th className="border-b border-slate-700 px-3 py-2">Penghasilan</th>
-                    <th className="border-b border-slate-700 px-3 py-2">Rasio Cicilan</th>
-                    <th className="border-b border-slate-700 px-3 py-2">Riwayat</th>
-                    <th className="border-b border-slate-700 px-3 py-2">BI Checking</th>
-                    <th className="border-b border-slate-700 px-3 py-2">Risiko</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-4 py-12 text-center text-slate-500">
-                        Data nasabah belum ditambahkan.
-                      </td>
-                    </tr>
-                  ) : (
-                    rows.map((row) => {
-                      const progress = Math.min(100, Math.max(0, row.rasio))
-                      const risikoColor =
-                        row.risiko === 'Rendah'
-                          ? 'bg-emerald-500'
-                          : row.risiko === 'Sedang'
-                            ? 'bg-amber-400'
-                            : 'bg-rose-500'
-
-                      return (
-                        <tr
-                          key={row.id}
-                          onClick={() => {
-                            setUiField('activeNasabahId', row.id)
-                            setUiField('isDetailOpen', true)
-                            setUiField('selectedNasabah', row)
-                            setUiField('isModalOpen', true)
-                          }}
-                          className="border-b border-slate-700 last:border-b-0 cursor-pointer hover:bg-slate-900"
-                        >
-                          <td className="px-3 py-2 font-medium text-slate-100">{row.nama}</td>
-                          <td className="px-3 py-2 text-slate-300">{row.nik}</td>
-                          <td className="px-3 py-2 text-slate-300">{row.hp}</td>
-                          <td className="px-3 py-2 text-slate-300">{row.noRek}</td>
-                          <td className="px-3 py-2 text-slate-300">{row.kerja}</td>
-                          <td className="px-3 py-2 text-slate-300">{currencyFormatter.format(row.gaji)}</td>
-                          <td className="px-3 py-2">
-                            <div className="mb-2 text-xs text-slate-400">{row.rasio}%</div>
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-700">
-                              <div className={`h-full rounded-full ${risikoColor}`} style={{ width: `${progress}%` }} />
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-slate-300">{row.riwayat}</td>
-                          <td className="px-3 py-2">
-                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${row.biBadgeClass}`}>
-                              {row.biStatusLabel}
-                            </span>
-                          </td>
-                          <td className="px-3 py-2">
-                            <span
-                              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-slate-950 ${row.risiko === 'Rendah'
-                                  ? 'bg-emerald-400'
-                                  : row.risiko === 'Sedang'
-                                    ? 'bg-amber-300'
-                                    : 'bg-rose-400'
-                                }`}
-                            >
-                              {row.risiko}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+      {/* Filter & Search Bar */}
+      <section className="mb-6 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari berdasarkan nama, NIK, No. Rekening, atau No. HP..."
+              className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2.5 text-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            />
           </div>
 
-          {showDetail && activeNasabah ? (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4 py-10">
-              <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-slate-800 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-100">Detail Nasabah</h2>
-                    <p className="mt-1 text-xs text-slate-400">{activeNasabah.nama}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUiField('activeNasabahId', null)
-                      setUiField('isDetailOpen', false)
-                      setUiField('selectedNasabah', null)
-                      setUiField('isModalOpen', false)
-                    }}
-                    className="rounded-2xl bg-slate-700 px-3 py-1 text-xs font-semibold text-slate-100 transition hover:bg-slate-600"
-                  >
-                    Tutup
-                  </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-400 uppercase">Filter Risiko:</span>
+            {['Semua', 'Rendah', 'Sedang', 'Tinggi'].map((risk) => (
+              <button
+                key={risk}
+                type="button"
+                onClick={() => setFilterRisiko(risk)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  filterRisiko === risk
+                    ? 'bg-green-700 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {risk}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Table Nasabah */}
+      <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#111]">Daftar Nasabah Anggota</h2>
+          <span className="text-sm text-slate-500">Menampilkan {filteredRows.length} dari {nasabahList.length} anggota</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 font-semibold">
+                <th className="p-3">Nama Anggota</th>
+                <th className="p-3">No. Rekening</th>
+                <th className="p-3">No. HP</th>
+                <th className="p-3">Pekerjaan</th>
+                <th className="p-3">Penghasilan / Bln</th>
+                <th className="p-3">Rasio Cicilan</th>
+                <th className="p-3">SLIK / BI</th>
+                <th className="p-3">Risiko</th>
+                <th className="p-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-8 text-center text-slate-400">
+                    Tidak ditemukan data anggota yang sesuai filter/pencarian.
+                  </td>
+                </tr>
+              ) : (
+                filteredRows.map((row) => {
+                  const risikoBadge =
+                    row.risiko === 'Rendah'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : row.risiko === 'Sedang'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3">
+                        <div className="font-semibold text-slate-900">{row.nama}</div>
+                        <div className="text-xs text-slate-400">{row.nik}</div>
+                      </td>
+                      <td className="p-3 font-mono text-xs text-slate-700">{row.noRek}</td>
+                      <td className="p-3 text-slate-600">{row.hp}</td>
+                      <td className="p-3 text-slate-600">{row.kerja}</td>
+                      <td className="p-3 font-medium text-slate-900">{currencyFormatter.format(row.gaji)}</td>
+                      <td className="p-3">
+                        <div className="text-xs font-semibold text-slate-700">{row.rasio}%</div>
+                        <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden mt-1">
+                          <div
+                            className={`h-full ${
+                              row.rasio <= 30 ? 'bg-emerald-500' : row.rasio <= 50 ? 'bg-amber-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${Math.min(100, row.rasio)}%` }}
+                          />
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold border ${row.biBadgeClass}`}>
+                          {row.biStatusLabel}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold ${risikoBadge}`}>
+                          {row.risiko}
+                        </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedNasabah(row)}
+                          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-xs"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-slate-500" />
+                          Detail
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Detail Nasabah Modal */}
+      {selectedNasabah && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 p-6 bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Detail Anggota Koperasi</h3>
+                <p className="text-xs text-slate-500">ID Anggota: #{selectedNasabah.id} • {selectedNasabah.noRek}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNasabah(null)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Profile Card */}
+              <div className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4 border border-slate-100">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">Nama Lengkap</span>
+                  <p className="font-bold text-slate-900">{selectedNasabah.nama}</p>
                 </div>
-                <div className="grid gap-4 p-4 text-slate-100 md:grid-cols-2">
-                  <div className="space-y-4 rounded-3xl border border-slate-700 bg-slate-900 p-4">
-                    <p className="text-sm font-semibold text-slate-100">Data Pribadi</p>
-                    <div className="grid gap-2 text-sm text-slate-300">
-                      <p>Nama: {activeNasabah.nama}</p>
-                      <p>NIK: {activeNasabah.nik}</p>
-                      <p>Email: {activeNasabah.email}</p>
-                      <p>No. HP: {activeNasabah.hp}</p>
-                      <p>No. Rekening: {activeNasabah.noRek}</p>
-                      <p>Tanggal Lahir: {activeNasabah.lahir}</p>
-                      <p>Alamat: {activeNasabah.alamat}</p>
-                    </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">NIK (KTP)</span>
+                  <p className="font-bold text-slate-900">{selectedNasabah.nik}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">No. Telepon / HP</span>
+                  <p className="font-semibold text-slate-800">{selectedNasabah.hp}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">Email</span>
+                  <p className="font-semibold text-slate-800">{selectedNasabah.email}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">Tanggal Lahir</span>
+                  <p className="font-semibold text-slate-800">{selectedNasabah.lahir}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">Alamat Domisili</span>
+                  <p className="font-semibold text-slate-800">{selectedNasabah.alamat}</p>
+                </div>
+              </div>
+
+              {/* Data Ibu Kandung */}
+              <div className="rounded-xl border border-slate-100 p-4 space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Data Ibu Kandung</h4>
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <span className="text-xs text-slate-400">Nama Ibu:</span>
+                    <p className="font-semibold text-slate-800">{selectedNasabah.ibu.nama}</p>
                   </div>
-                  <div className="space-y-4 rounded-3xl border border-slate-700 bg-slate-900 p-4">
-                    <p className="text-sm font-semibold text-slate-100">Data Ibu Kandung</p>
-                    <div className="grid gap-2 text-sm text-slate-300">
-                      <p>Nama Ibu: {activeNasabah.ibu.nama}</p>
-                      <p>Tanggal Lahir Ibu: {activeNasabah.ibu.lahir}</p>
-                      <p>Alamat Ibu: {activeNasabah.ibu.alamat}</p>
-                    </div>
+                  <div>
+                    <span className="text-xs text-slate-400">Tanggal Lahir Ibu:</span>
+                    <p className="font-semibold text-slate-800">{selectedNasabah.ibu.lahir}</p>
                   </div>
-                  <div className="space-y-4 rounded-3xl border border-slate-700 bg-slate-900 p-4">
-                    <p className="text-sm font-semibold text-slate-100">Pekerjaan & Keuangan</p>
-                    <div className="grid gap-2 text-sm text-slate-300">
-                      <p>Pekerjaan: {activeNasabah.kerja}</p>
-                      <p>Penghasilan: {currencyFormatter.format(activeNasabah.gaji)}</p>
-                      <p>Cicilan: {currencyFormatter.format(activeNasabah.cicilan)}</p>
-                      <p>Riwayat Pembayaran: {activeNasabah.riwayat}</p>
-                      <p>Rasio Cicilan: {activeNasabah.rasio}%</p>
-                    </div>
+                  <div>
+                    <span className="text-xs text-slate-400">Alamat Ibu:</span>
+                    <p className="font-semibold text-slate-800">{selectedNasabah.ibu.alamat}</p>
                   </div>
-                  <div className="space-y-4 rounded-3xl border border-slate-700 bg-slate-900 p-4">
-                    <p className="text-sm font-semibold text-slate-100">BI Checking</p>
-                    <div className="grid gap-2 text-sm text-slate-300">
-                      <p>Status SLIK: {activeNasabah.slik}</p>
-                      <p>Jumlah Lembaga: {activeNasabah.lembaga}</p>
-                      <p>Total Hutang Lain: {currencyFormatter.format(activeNasabah.hutangLain)}</p>
-                      <p>Tunggakan: {activeNasabah.tunggakan ? 'Ada Tunggakan' : 'Tidak Ada'}</p>
-                      <p>Catatan: {activeNasabah.catatan || 'Tidak ada catatan tambahan.'}</p>
-                    </div>
+                </div>
+              </div>
+
+              {/* Data Finansial */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="rounded-xl border border-slate-100 p-4">
+                  <span className="text-xs text-slate-400">Pekerjaan</span>
+                  <p className="text-base font-bold text-slate-900 mt-1">{selectedNasabah.kerja}</p>
+                </div>
+                <div className="rounded-xl border border-slate-100 p-4">
+                  <span className="text-xs text-slate-400">Penghasilan / Bln</span>
+                  <p className="text-base font-bold text-emerald-700 mt-1">
+                    {currencyFormatter.format(selectedNasabah.gaji)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-100 p-4">
+                  <span className="text-xs text-slate-400">Cicilan Saat Ini</span>
+                  <p className="text-base font-bold text-slate-900 mt-1">
+                    {currencyFormatter.format(selectedNasabah.cicilan)}
+                  </p>
+                </div>
+              </div>
+
+              {/* SLIK / BI Checking Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-xl border border-slate-100 p-4">
+                  <span className="text-xs text-slate-400">Kolektibilitas SLIK</span>
+                  <div className="mt-2">
+                    <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold border ${selectedNasabah.biBadgeClass}`}>
+                      {selectedNasabah.biStatusLabel}
+                    </span>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Total Hutang Lain: {currencyFormatter.format(selectedNasabah.hutangLain)} ({selectedNasabah.lembaga} lembaga)
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-100 p-4">
+                  <span className="text-xs text-slate-400">Tingkat Risiko Kredit</span>
+                  <div className="mt-2">
+                    <span
+                      className={`inline-flex rounded-md px-3 py-1 text-xs font-bold ${
+                        selectedNasabah.risiko === 'Rendah'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : selectedNasabah.risiko === 'Sedang'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      Risiko {selectedNasabah.risiko} (DSR: {selectedNasabah.rasio}%)
+                    </span>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Status Tunggakan: {selectedNasabah.tunggakan ? 'Ada Tunggakan Aktif' : 'Tidak Ada Tunggakan'}
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
-          ) : null}
-        </section>
-      </div>
-    </div>
+
+            <div className="flex justify-end border-t border-slate-100 bg-slate-50 p-6">
+              <button
+                type="button"
+                onClick={() => setSelectedNasabah(null)}
+                className="rounded-lg bg-green-700 px-5 py-2 text-sm font-semibold text-white hover:bg-green-800 transition"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   )
 }
