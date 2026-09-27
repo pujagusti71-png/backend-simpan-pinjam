@@ -159,14 +159,17 @@ function TransaksiContent() {
                 : []
             setPinjamanList(pList)
 
-            if (nList.length > 0 && !simpananForm.nasabahId) {
-                setSimpananForm((prev) => ({ ...prev, nasabahId: String(nList[0].id) }))
+            const firstNasabah = nList[0]
+            if (firstNasabah && !simpananForm.nasabahId) {
+                setSimpananForm((prev) => ({ ...prev, nasabahId: String(firstNasabah.id) }))
             }
-            if (pList.length > 0 && !pinjamanForm.pinjamanId) {
+
+            const firstPinjaman = pList[0]
+            if (firstPinjaman && !pinjamanForm.pinjamanId) {
                 setPinjamanForm((prev) => ({
                     ...prev,
-                    pinjamanId: String(pList[0].id),
-                    jumlahBayar: pList[0].cicilanBulanan ? String(pList[0].cicilanBulanan) : prev.jumlahBayar,
+                    pinjamanId: String(firstPinjaman.id),
+                    jumlahBayar: firstPinjaman.cicilanBulanan ? String(firstPinjaman.cicilanBulanan) : prev.jumlahBayar,
                 }))
             }
 
