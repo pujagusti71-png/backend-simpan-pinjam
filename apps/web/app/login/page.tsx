@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Lock, AlertCircle, Loader2 } from 'lucide-react'
 import { api, setToken } from '@/lib/api'
@@ -11,6 +11,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+    const passwordRef = useRef<HTMLInputElement>(null)
 
     const handleLogin = async () => {
         setLoading(true)
@@ -74,6 +75,12 @@ export default function LoginPage() {
                                 placeholder="Username"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        passwordRef.current?.focus()
+                                    }
+                                }}
                                 className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-4 text-sm text-slate-800 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                             />
                         </div>
@@ -82,6 +89,7 @@ export default function LoginPage() {
                             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 id="login-password"
+                                ref={passwordRef}
                                 type="password"
                                 placeholder="Password"
                                 value={password}
