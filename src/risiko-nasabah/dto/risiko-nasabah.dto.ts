@@ -14,6 +14,26 @@ export class PreLoanCheckDto {
     jenisBunga?: 'flat' | 'efektif';
 }
 
+export class DetailSkorDto {
+    @ApiProperty({ example: 10, description: 'Skor dari jenis pekerjaan (0-30)' })
+    skorPekerjaan: number;
+
+    @ApiProperty({ example: 15, description: 'Skor dari rasio cicilan terhadap penghasilan (0-30)' })
+    skorRasioCicilan: number;
+
+    @ApiProperty({ example: 10, description: 'Skor dari riwayat pembayaran (0-20)' })
+    skorRiwayatPembayaran: number;
+
+    @ApiProperty({ example: 5, description: 'Skor dari pinjaman eksternal/SLIK (0-10)' })
+    skorPinjamanEksternal: number;
+
+    @ApiProperty({ example: 5, description: 'Skor dari perilaku pinjaman (0-10)' })
+    skorBehavior: number;
+
+    @ApiProperty({ example: 45, description: 'Total skor (0-100)' })
+    totalSkor: number;
+}
+
 export class RisikoNasabahResponseDto {
     @ApiProperty({ example: 1 })
     nasabahId: number;
@@ -45,28 +65,8 @@ export class RisikoNasabahResponseDto {
     @ApiPropertyOptional({ example: 'Frekuensi pinjaman tinggi; Pernah telat bayar' })
     indikasiBehaviorBerisiko: string | null;
 
-    @ApiProperty()
+    @ApiProperty({ type: () => DetailSkorDto })
     detailSkor: DetailSkorDto;
-}
-
-export class DetailSkorDto {
-    @ApiProperty({ example: 10, description: 'Skor dari jenis pekerjaan (0-30)' })
-    skorPekerjaan: number;
-
-    @ApiProperty({ example: 15, description: 'Skor dari rasio cicilan terhadap penghasilan (0-30)' })
-    skorRasioCicilan: number;
-
-    @ApiProperty({ example: 10, description: 'Skor dari riwayat pembayaran (0-20)' })
-    skorRiwayatPembayaran: number;
-
-    @ApiProperty({ example: 5, description: 'Skor dari pinjaman eksternal/SLIK (0-10)' })
-    skorPinjamanEksternal: number;
-
-    @ApiProperty({ example: 5, description: 'Skor dari perilaku pinjaman (0-10)' })
-    skorBehavior: number;
-
-    @ApiProperty({ example: 45, description: 'Total skor (0-100)' })
-    totalSkor: number;
 }
 
 export class BICheckingSummaryDto {
