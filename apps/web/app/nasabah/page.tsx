@@ -404,7 +404,7 @@ export default function NasabahPage() {
           ? 'bg-amber-50 text-amber-700 border-amber-200'
           : 'bg-red-50 text-red-700 border-red-200'
 
-      return { ...item, rasio: rounded, risiko, biStatusLabel, biBadgeClass }
+      return { ...item, rasio: rounded, risiko: risiko as 'Rendah' | 'Sedang' | 'Tinggi', biStatusLabel, biBadgeClass }
     })
   }, [nasabahList])
 
