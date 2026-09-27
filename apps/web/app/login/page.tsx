@@ -14,6 +14,15 @@ export default function LoginPage() {
     const passwordRef = useRef<HTMLInputElement>(null)
 
     const handleLogin = async () => {
+        if (!username.trim()) {
+            setError('Silakan masukkan username terlebih dahulu')
+            return
+        }
+        if (!password) {
+            setError('Silakan masukkan password')
+            passwordRef.current?.focus()
+            return
+        }
         setLoading(true)
         setError(null)
         try {

@@ -107,16 +107,9 @@ export default function OriginalPinjaman({
                         <button
                             type="button"
                             onClick={exportData}
-                            className="rounded-md border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700"
+                            className="rounded-md border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                         >
                             Export Data
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onNew}
-                            className="rounded-md bg-[#128c7e] px-4 py-2.5 font-semibold text-white"
-                        >
-                            + Pengajuan Baru
                         </button>
                     </div>
                 </div>

@@ -47,12 +47,13 @@ export default function OriginalSimpanan({
     <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-10 text-slate-900">
       <div className="mb-[30px] flex items-center justify-between gap-4">
         <h1 className="m-0 text-2xl font-bold text-[#111]">Data Simpanan</h1>
-        <Link
-          className="rounded-md border-0 bg-[#128c7e] px-4 py-2.5 font-semibold text-white"
-          href="/simpanan/transaksi"
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
         >
-          + Simpanan Baru
-        </Link>
+          Export Data
+        </button>
       </div>
       <section className="mb-6 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
         <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-4">

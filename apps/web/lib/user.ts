@@ -1,7 +1,7 @@
 export const APP_USER = {
-    name: 'Ahmad Rizal',
+    name: 'TheMinggu',
     role: 'Super Admin',
-    initials: 'AR',
+    initials: 'TM',
 }
 
 export function getUserInitials(name: string = APP_USER.name): string {
