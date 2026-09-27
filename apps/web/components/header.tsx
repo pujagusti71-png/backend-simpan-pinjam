@@ -9,11 +9,20 @@ import { APP_USER, getUserInitials } from '@/lib/user'
 // Breadcrumb map
 const pageTitles: Record<string, string> = {
     '/dashboard': 'Beranda',
-    '/nasabah': 'Anggota',
+    '/nasabah': 'Data Anggota',
+    '/nasabah/tidak-aktif': 'Anggota Tidak Aktif',
     '/simpanan': 'Simpanan',
-    '/pinjaman': 'Pinjaman',
+    '/simpanan/data': 'Data Simpanan',
+    '/simpanan/transaksi': 'Transaksi Simpanan',
+    '/simpanan/buku-tabungan': 'Buku Tabungan',
+    '/simpanan/deposito': 'Deposito',
+    '/pinjaman': 'Data Pinjaman',
+    '/pinjaman/pembayaran': 'Pembayaran Pinjaman',
+    '/pinjaman/pre-loan-checking': 'Pre-Loan Checking',
+    '/pinjaman/analisis-skor-risiko': 'Analisis Skor Risiko',
     '/analisis': 'Analisis Risiko',
-    '/laporan': 'Laporan',
+    '/laporan': 'Laporan Umum',
+    '/laporan/ldr-likuiditas': 'LDR & Likuiditas',
 }
 
 export default function Header() {
