@@ -1,6 +1,6 @@
 export const APP_USER = {
     name: 'TheMinggu',
-    role: 'Super Admin',
+    role: 'Admin Magang',
     initials: 'TM',
 }
 
