@@ -187,19 +187,6 @@ export default function Sidebar() {
                     </div>
                 ))}
             </nav>
-
-            {/* Logout */}
-            <div className="border-t border-green-700 p-2">
-                <button
-                    id="sidebar-logout-btn"
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium text-green-100 hover:bg-green-700 transition-all"
-                >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Keluar
-                </button>
-            </div>
         </aside>
     )
 }
