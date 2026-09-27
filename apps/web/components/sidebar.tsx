@@ -52,8 +52,8 @@ const navConfig = [
     {
         group: 'PENGAJUAN',
         items: [
-            { href: '/simpanan/transaksi', label: 'Pengajuan Simpanan', icon: PlusCircle },
-            { href: '/pinjaman', label: 'Pengajuan Pinjaman', icon: PlusCircle },
+            { href: '/pengajuan/simpanan', label: 'Pengajuan Simpanan', icon: PlusCircle },
+            { href: '/pengajuan/pinjaman', label: 'Pengajuan Pinjaman', icon: PlusCircle },
         ]
     },
     {

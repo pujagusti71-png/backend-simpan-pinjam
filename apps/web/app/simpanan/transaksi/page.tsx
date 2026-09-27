@@ -1,9 +1,28 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-
-import { apiFetch } from '@/lib/api'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import {
+    ArrowDownRight,
+    ArrowLeftRight,
+    ArrowUpRight,
+    Banknote,
+    Calendar,
+    CheckCircle2,
+    Clock,
+    CreditCard,
+    DollarSign,
+    Filter,
+    PiggyBank,
+    PlusCircle,
+    Search,
+    ShieldAlert,
+    Sparkles,
+    User,
+    Wallet,
+} from 'lucide-react'
+import { api, apiFetch } from '@/lib/api'
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -14,20 +33,35 @@ const formatCurrency = (value: number) =>
 
 const formatDate = (value: string) => {
     if (!value) return '-'
-    return new Date(value).toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    })
+    try {
+        return new Date(value).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        })
+    } catch {
+        return value
+    }
 }
 
 type NasabahOption = {
     id: number
     nama: string
     nik: string
+    saldoRataRata?: number
 }
 
-type TransactionRow = {
+type PinjamanOption = {
+    id: number
+    nasabahId: number
+    namaNasabah: string
+    jumlahPinjaman: number
+    tenor: number
+    cicilanBulanan: number
+    status: string
+}
+
+type SimpananRow = {
     id: number
     nasabah: string
     tanggal: string
@@ -39,311 +73,963 @@ type TransactionRow = {
     keterangan: string
 }
 
-export default function TransaksiSimpananPage() {
+type PinjamanRow = {
+    id: number
+    namaNasabah: string
+    pinjamanId: number
+    jumlahBayar: number
+    tanggalBayar: string
+    statusBayar: string
+}
+
+function TransaksiContent() {
+    const searchParams = useSearchParams()
+    const initialTab = searchParams.get('tab') === 'pinjaman' ? 'pinjaman' : 'simpanan'
+
+    const [activeTab, setActiveTab] = useState<'simpanan' | 'pinjaman'>(initialTab)
+
+    // Common State
     const [nasabahList, setNasabahList] = useState<NasabahOption[]>([])
-    const [rows, setRows] = useState<TransactionRow[]>([])
+    const [pinjamanList, setPinjamanList] = useState<PinjamanOption[]>([])
     const [loading, setLoading] = useState(true)
-    const [submitting, setSubmitting] = useState(false)
-    const [error, setError] = useState('')
+
+    // Simpanan State
+    const [simpananRows, setSimpananRows] = useState<SimpananRow[]>([])
+    const [simpananSubmitting, setSimpananSubmitting] = useState(false)
+    const [simpananError, setSimpananError] = useState('')
     const [selectedBalance, setSelectedBalance] = useState(0)
-    const [form, setForm] = useState({
+    const [searchSimpanan, setSearchSimpanan] = useState('')
+    const [filterJenisSimpanan, setFilterJenisSimpanan] = useState<'semua' | 'Setoran' | 'Penarikan'>('semua')
+
+    const [simpananForm, setSimpananForm] = useState({
         nasabahId: '',
         jenis: 'setoran',
-        nominal: '',
+        nominal: '500000',
         tanggal: new Date().toISOString().slice(0, 10),
         keterangan: '',
     })
 
-    const autoRate = Number(form.nominal) > 0 && selectedBalance + Number(form.nominal) > 5_000_000
-        ? 0.5
-        : 0
-    const autoInterest = (Number(form.nominal) || 0) * (autoRate / 100)
+    // Pinjaman State
+    const [pinjamanRows, setPinjamanRows] = useState<PinjamanRow[]>([])
+    const [pinjamanSubmitting, setPinjamanSubmitting] = useState(false)
+    const [pinjamanError, setPinjamanError] = useState('')
+    const [searchPinjaman, setSearchPinjaman] = useState('')
+    const [filterStatusPinjaman, setFilterStatusPinjaman] = useState<'semua' | 'lancar' | 'telat'>('semua')
 
-    const loadData = async () => {
+    const [pinjamanForm, setPinjamanForm] = useState({
+        pinjamanId: '',
+        jumlahBayar: '1000000',
+        tanggalBayar: new Date().toISOString().slice(0, 10),
+        statusBayar: 'lancar',
+        nomorCicilan: '',
+    })
+
+    // Bunga Otomatis Simpanan
+    const autoRate =
+        Number(simpananForm.nominal) > 0 && selectedBalance + Number(simpananForm.nominal) > 5_000_000
+            ? 0.5
+            : 0
+
+    // Load All Data
+    const loadAllData = async () => {
         try {
             setLoading(true)
-            const nasabah = await apiFetch('/nasabah')
-            const list = Array.isArray(nasabah) ? nasabah : []
-            setNasabahList(list)
 
-            if (list.length > 0 && !form.nasabahId) {
-                setForm((prev) => ({ ...prev, nasabahId: String(list[0].id) }))
+            const [nasabahData, pinjamanData, pembayaranData, simpananData] = await Promise.all([
+                api.getNasabah().catch(() => []),
+                api.getPinjaman().catch(() => []),
+                api.getPembayaran().catch(() => []),
+                api.getSimpanan().catch(() => []),
+            ])
+
+            const nList = Array.isArray(nasabahData) ? nasabahData : []
+            setNasabahList(nList)
+
+            // Pinjaman list for selection
+            const pList = Array.isArray(pinjamanData)
+                ? pinjamanData.map((p: any) => ({
+                      id: Number(p.id),
+                      nasabahId: Number(p.nasabahId ?? p.nasabah?.id),
+                      namaNasabah: p.nasabah?.nama ?? 'Nasabah',
+                      jumlahPinjaman: Number(p.jumlahPinjaman ?? 0),
+                      tenor: Number(p.tenor ?? 0),
+                      cicilanBulanan: Number(p.cicilanBulanan ?? 0),
+                      status: p.status ?? 'active',
+                  }))
+                : []
+            setPinjamanList(pList)
+
+            if (nList.length > 0 && !simpananForm.nasabahId) {
+                setSimpananForm((prev) => ({ ...prev, nasabahId: String(nList[0].id) }))
+            }
+            if (pList.length > 0 && !pinjamanForm.pinjamanId) {
+                setPinjamanForm((prev) => ({
+                    ...prev,
+                    pinjamanId: String(pList[0].id),
+                    jumlahBayar: pList[0].cicilanBulanan ? String(pList[0].cicilanBulanan) : prev.jumlahBayar,
+                }))
             }
 
-            const flatRows: TransactionRow[] = []
-
-            for (const item of list) {
-                try {
-                    const response = await apiFetch(`/simpanan/nasabah/${item.id}`)
-                    const records = Array.isArray(response?.data)
-                        ? response.data
-                        : Array.isArray(response)
-                            ? response
-                            : []
-
-                    records.forEach((record: any) => {
-                        const isBunga = String(record?.keterangan ?? '').toLowerCase().includes('bunga')
-                        const bungaRate = Number(record?.bungaSimpanan ?? 0)
-                        const nominalValue = Math.abs(Number(record.jumlahSetoran || 0)) || Number(record?.transaksiBunga?.[0]?.nominalBunga || 0)
-                        flatRows.push({
-                            id: record.id,
-                            nasabah: item.nama,
-                            tanggal: record.tanggalSetoran || record.createdAt,
-                            jenis: isBunga ? 'Setoran' : Number(record.jumlahSetoran || 0) >= 0 ? 'Setoran' : 'Penarikan',
-                            nominal: nominalValue,
-                            bungaRate: bungaRate > 0 ? bungaRate : isBunga ? 0.5 : 0,
-                            saldoAkhir: Number(record.saldoAkhir || 0),
-                            status: record.status || 'aktif',
-                            keterangan: record.keterangan || (isBunga ? 'Bunga tabungan' : 'Transaksi simpanan'),
-                        })
-                    })
-                } catch {
-                    // skip failed customer
+            // Simpanan Rows
+            const sRecords = Array.isArray(simpananData) ? simpananData : []
+            const sRows: SimpananRow[] = sRecords.map((r: any) => {
+                const nasabahItem = nList.find((n: any) => Number(n.id) === Number(r.nasabahId ?? r.nasabah?.id))
+                const isBunga = String(r?.keterangan ?? '').toLowerCase().includes('bunga')
+                const bungaRate = Number(r?.bungaSimpanan ?? 0)
+                const nominalVal = Math.abs(Number(r.jumlahSetoran || 0))
+                return {
+                    id: Number(r.id),
+                    nasabah: nasabahItem?.nama ?? r.nasabah?.nama ?? 'Nasabah',
+                    tanggal: r.tanggalSetoran || r.createdAt || '',
+                    jenis: isBunga ? 'Setoran' : Number(r.jumlahSetoran || 0) >= 0 ? 'Setoran' : 'Penarikan',
+                    nominal: nominalVal,
+                    bungaRate: bungaRate > 0 ? bungaRate : isBunga ? 0.5 : 0,
+                    saldoAkhir: Number(r.saldoAkhir || 0),
+                    status: r.status || 'aktif',
+                    keterangan: r.keterangan || (isBunga ? 'Bunga tabungan' : 'Transaksi simpanan'),
                 }
-            }
+            })
+            setSimpananRows(sRows.sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()))
 
-            setRows(flatRows.sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime()))
-        } catch (error) {
-            console.error('Gagal memuat transaksi simpanan', error)
-            setRows([])
+            // Pinjaman Pembayaran Rows
+            const pRecords = Array.isArray(pembayaranData) ? pembayaranData : []
+            const pRows: PinjamanRow[] = pRecords.map((item: any) => ({
+                id: Number(item.id ?? 0),
+                namaNasabah: item.pinjaman?.nasabah?.nama ?? 'Nasabah',
+                jumlahBayar: Number(item.jumlahBayar ?? 0),
+                tanggalBayar: item.tanggalBayar ?? item.tanggalPembayaran ?? item.createdAt ?? '',
+                statusBayar: item.statusBayar ?? 'lancar',
+                pinjamanId: Number(item.pinjamanId ?? item.pinjaman?.id ?? 0),
+            }))
+            setPinjamanRows(pRows.sort((a, b) => new Date(b.tanggalBayar).getTime() - new Date(a.tanggalBayar).getTime()))
+        } catch (err) {
+            console.error('Gagal memuat data transaksi', err)
         } finally {
             setLoading(false)
         }
     }
 
     useEffect(() => {
-        void loadData()
+        void loadAllData()
     }, [])
 
+    // Balance check for selected nasabah in Simpanan
     useEffect(() => {
-        const fetchSelectedBalance = async () => {
-            if (!form.nasabahId) {
+        const fetchBalance = async () => {
+            if (!simpananForm.nasabahId) {
                 setSelectedBalance(0)
                 return
             }
-
             try {
-                const summary = await apiFetch(`/simpanan/summary/${form.nasabahId}`)
+                const summary = await apiFetch(`/simpanan/summary/${simpananForm.nasabahId}`)
                 setSelectedBalance(Number(summary?.saldoSaatIni || 0))
             } catch {
                 setSelectedBalance(0)
             }
         }
+        void fetchBalance()
+    }, [simpananForm.nasabahId])
 
-        void fetchSelectedBalance()
-    }, [form.nasabahId])
+    // Update default nominal if pinjaman selected changes
+    const handlePinjamanSelectChange = (id: string) => {
+        const selected = pinjamanList.find((p) => String(p.id) === id)
+        setPinjamanForm((prev) => ({
+            ...prev,
+            pinjamanId: id,
+            jumlahBayar: selected?.cicilanBulanan ? String(selected.cicilanBulanan) : prev.jumlahBayar,
+        }))
+    }
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault()
-        setError('')
+    // Submit Transaksi Simpanan
+    const handleSimpananSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSimpananError('')
 
-        if (!form.nasabahId || !form.nominal) {
-            setError('Pilih nasabah dan masukkan nominal transaksi.')
+        if (!simpananForm.nasabahId || !simpananForm.nominal) {
+            setSimpananError('Pilih nasabah dan masukkan nominal transaksi.')
             return
         }
 
-        const nominal = Number(form.nominal)
-        if (!Number.isFinite(nominal) || nominal <= 0) {
-            setError('Nominal harus angka positif.')
+        const nominal = Number(simpananForm.nominal)
+        if (!nominal || nominal <= 0) {
+            setSimpananError('Nominal harus angka positif.')
+            return
+        }
+
+        if (simpananForm.jenis === 'penarikan' && nominal > selectedBalance) {
+            setSimpananError(`Saldo tidak mencukupi. Saldo saat ini: ${formatCurrency(selectedBalance)}`)
             return
         }
 
         try {
-            setSubmitting(true)
-
-            if (form.jenis === 'setoran') {
-                const rate = selectedBalance + nominal > 5_000_000 ? 0.5 : 0
-
-                await apiFetch('/simpanan', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        nasabahId: Number(form.nasabahId),
-                        jumlahSetoran: nominal,
-                        bungaSimpanan: rate,
-                        jenisInterest: 'flat',
-                        tanggalSetoran: new Date(`${form.tanggal}T00:00:00`).toISOString(),
-                        keterangan: form.keterangan || 'Setoran simpanan',
-                    }),
+            setSimpananSubmitting(true)
+            if (simpananForm.jenis === 'setoran') {
+                await api.createSimpanan({
+                    nasabahId: Number(simpananForm.nasabahId),
+                    jumlahSetoran: nominal,
+                    bungaSimpanan: autoRate,
+                    jenisInterest: 'flat',
+                    tanggalSetoran: new Date(`${simpananForm.tanggal}T00:00:00`).toISOString(),
+                    keterangan: simpananForm.keterangan || 'Setoran simpanan',
                 })
             } else {
-                await apiFetch('/simpanan/withdraw', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        nasabahId: Number(form.nasabahId),
-                        jumlahPenarikan: nominal,
-                        keterangan: form.keterangan || 'Penarikan simpanan',
-                    }),
+                await api.withdrawSimpanan({
+                    nasabahId: Number(simpananForm.nasabahId),
+                    jumlahPenarikan: nominal,
+                    keterangan: simpananForm.keterangan || 'Penarikan simpanan',
                 })
             }
 
-            setForm((prev) => ({
+            setSimpananForm((prev) => ({
                 ...prev,
                 nominal: '',
-                tanggal: new Date().toISOString().slice(0, 10),
                 keterangan: '',
             }))
-            await loadData()
-        } catch (err) {
-            console.error('Gagal menyimpan transaksi simpanan', err)
-            setError(err instanceof Error ? err.message : 'Gagal menyimpan transaksi simpanan.')
+            await loadAllData()
+        } catch (err: any) {
+            setSimpananError(err.message || 'Gagal menyimpan transaksi simpanan.')
         } finally {
-            setSubmitting(false)
+            setSimpananSubmitting(false)
         }
     }
 
+    // Submit Transaksi Pembayaran Pinjaman
+    const handlePinjamanSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setPinjamanError('')
+
+        if (!pinjamanForm.pinjamanId || !pinjamanForm.jumlahBayar) {
+            setPinjamanError('Pilih pinjaman dan masukkan jumlah bayar.')
+            return
+        }
+
+        const nominal = Number(pinjamanForm.jumlahBayar)
+        if (!nominal || nominal <= 0) {
+            setPinjamanError('Jumlah bayar harus lebih besar dari 0.')
+            return
+        }
+
+        try {
+            setPinjamanSubmitting(true)
+            await api.createPembayaran({
+                pinjamanId: Number(pinjamanForm.pinjamanId),
+                jumlahBayar: nominal,
+                tanggalBayar: new Date(`${pinjamanForm.tanggalBayar}T00:00:00`).toISOString(),
+                statusBayar: pinjamanForm.statusBayar,
+                nomorCicilan: pinjamanForm.nomorCicilan ? Number(pinjamanForm.nomorCicilan) : undefined,
+            })
+
+            setPinjamanForm((prev) => ({
+                ...prev,
+                nomorCicilan: '',
+            }))
+            await loadAllData()
+        } catch (err: any) {
+            setPinjamanError(err.message || 'Gagal mencatat pembayaran pinjaman.')
+        } finally {
+            setPinjamanSubmitting(false)
+        }
+    }
+
+    // Filtered Lists
+    const filteredSimpanan = useMemo(() => {
+        return simpananRows.filter((r) => {
+            const matchName = r.nasabah.toLowerCase().includes(searchSimpanan.toLowerCase())
+            const matchJenis = filterJenisSimpanan === 'semua' || r.jenis === filterJenisSimpanan
+            return matchName && matchJenis
+        })
+    }, [simpananRows, searchSimpanan, filterJenisSimpanan])
+
+    const filteredPinjaman = useMemo(() => {
+        return pinjamanRows.filter((r) => {
+            const matchName = r.namaNasabah.toLowerCase().includes(searchPinjaman.toLowerCase())
+            const matchStatus = filterStatusPinjaman === 'semua' || r.statusBayar.toLowerCase() === filterStatusPinjaman
+            return matchName && matchStatus
+        })
+    }, [pinjamanRows, searchPinjaman, filterStatusPinjaman])
+
+    // Stats Simpanan
+    const totalSetoran = useMemo(() => {
+        return simpananRows.filter((r) => r.jenis === 'Setoran').reduce((sum, r) => sum + r.nominal, 0)
+    }, [simpananRows])
+
+    const totalPenarikan = useMemo(() => {
+        return simpananRows.filter((r) => r.jenis === 'Penarikan').reduce((sum, r) => sum + r.nominal, 0)
+    }, [simpananRows])
+
+    // Stats Pinjaman
+    const totalBayarPinjaman = useMemo(() => {
+        return pinjamanRows.reduce((sum, r) => sum + r.jumlahBayar, 0)
+    }, [pinjamanRows])
+
+    const lancarCount = useMemo(() => {
+        return pinjamanRows.filter((r) => r.statusBayar?.toLowerCase() === 'lancar').length
+    }, [pinjamanRows])
+
+    const telatCount = useMemo(() => {
+        return pinjamanRows.filter((r) => r.statusBayar?.toLowerCase() === 'telat').length
+    }, [pinjamanRows])
+
     return (
-        <div className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-            <div className="mx-auto max-w-6xl space-y-8">
-                <header className="mb-8 flex items-center justify-between gap-4">
+        <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+            <div className="mx-auto max-w-7xl space-y-6">
+                {/* Header */}
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900">Transaksi Simpanan</h2>
-                        <p className="mt-2 text-slate-500">Catat setoran dan penarikan simpanan nasabah.</p>
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                            <Link href="/dashboard" className="hover:text-emerald-700">Beranda</Link>
+                            <span>/</span>
+                            <span className="font-medium text-slate-800">Transaksi</span>
+                        </div>
+                        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+                            Pusat Transaksi Koperasi
+                        </h1>
+                        <p className="text-sm text-slate-600">
+                            Pencatatan dan riwayat lengkap transaksi simpanan serta pembayaran angsuran pinjaman.
+                        </p>
                     </div>
-                    <Link
-                        href="/simpanan"
-                        className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+
+                    {/* Action shortcuts */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href="/pengajuan/simpanan"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3.5 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100"
+                        >
+                            <PlusCircle className="h-4 w-4 text-emerald-600" />
+                            Pengajuan Simpanan
+                        </Link>
+                        <Link
+                            href="/pengajuan/pinjaman"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3.5 py-2 text-sm font-semibold text-sky-800 shadow-sm transition hover:bg-sky-100"
+                        >
+                            <PlusCircle className="h-4 w-4 text-sky-600" />
+                            Pengajuan Pinjaman
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Tab Switcher */}
+                <div className="flex rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+                    <button
+                        onClick={() => setActiveTab('simpanan')}
+                        className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg py-3 text-sm font-bold transition ${
+                            activeTab === 'simpanan'
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
                     >
-                        Kembali ke Simpanan
-                    </Link>
-                </header>
+                        <PiggyBank className="h-5 w-5" />
+                        <span>Transaksi Simpanan</span>
+                        <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                activeTab === 'simpanan' ? 'bg-emerald-700 text-white' : 'bg-slate-200 text-slate-700'
+                            }`}
+                        >
+                            {simpananRows.length}
+                        </span>
+                    </button>
 
-                <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                    <h3 className="text-lg font-bold text-slate-900">Form transaksi baru</h3>
-                    <form onSubmit={handleSubmit} className="mt-5 grid gap-4 md:grid-cols-2">
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
-                            <span>Nasabah</span>
-                            <select
-                                value={form.nasabahId}
-                                onChange={(event) => setForm((prev) => ({ ...prev, nasabahId: event.target.value }))}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none ring-0 transition focus:border-sky-500"
-                            >
-                                <option value="">Pilih nasabah</option>
-                                {nasabahList.map((item) => (
-                                    <option key={item.id} value={item.id}>
-                                        {item.nama} ({item.nik})
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                    <button
+                        onClick={() => setActiveTab('pinjaman')}
+                        className={`flex flex-1 items-center justify-center gap-2.5 rounded-lg py-3 text-sm font-bold transition ${
+                            activeTab === 'pinjaman'
+                                ? 'bg-sky-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                    >
+                        <CreditCard className="h-5 w-5" />
+                        <span>Transaksi Pinjaman</span>
+                        <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                activeTab === 'pinjaman' ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
+                            }`}
+                        >
+                            {pinjamanRows.length}
+                        </span>
+                    </button>
+                </div>
 
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
-                            <span>Jenis transaksi</span>
-                            <select
-                                value={form.jenis}
-                                onChange={(event) => setForm((prev) => ({ ...prev, jenis: event.target.value }))}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
-                            >
-                                <option value="setoran">Setoran</option>
-                                <option value="penarikan">Penarikan</option>
-                            </select>
-                        </label>
+                {/* TAB 1: TRANSAKSI SIMPANAN */}
+                {activeTab === 'simpanan' && (
+                    <div className="space-y-6">
+                        {/* Summary Cards Simpanan */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Total Setoran</span>
+                                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                                        <ArrowDownRight className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-slate-900">
+                                    {formatCurrency(totalSetoran)}
+                                </div>
+                                <span className="text-xs text-slate-500">Dana simpanan masuk</span>
+                            </div>
 
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
-                            <span>Nominal</span>
-                            <input
-                                type="number"
-                                min="1"
-                                value={form.nominal}
-                                onChange={(event) => setForm((prev) => ({ ...prev, nominal: event.target.value }))}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
-                                placeholder="500000"
-                            />
-                        </label>
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Total Penarikan</span>
+                                    <div className="rounded-lg bg-rose-50 p-2 text-rose-600">
+                                        <ArrowUpRight className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-slate-900">
+                                    {formatCurrency(totalPenarikan)}
+                                </div>
+                                <span className="text-xs text-slate-500">Dana ditarik nasabah</span>
+                            </div>
 
-                        <label className="space-y-2 text-sm font-medium text-slate-700">
-                            <span>Tanggal</span>
-                            <input
-                                type="date"
-                                value={form.tanggal}
-                                onChange={(event) => setForm((prev) => ({ ...prev, tanggal: event.target.value }))}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
-                            />
-                        </label>
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Saldo Kas Bersih</span>
+                                    <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                                        <Wallet className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-emerald-700">
+                                    {formatCurrency(Math.max(totalSetoran - totalPenarikan, 0))}
+                                </div>
+                                <span className="text-xs text-slate-500">Setoran dikurangi penarikan</span>
+                            </div>
 
-                        <div className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                            <span>Bunga otomatis</span>
-                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
-                                {form.nominal && Number(form.nominal) > 0
-                                    ? `Saldo setelah setoran: ${formatCurrency(selectedBalance + Number(form.nominal))}. Bunga otomatis: ${autoRate.toFixed(1)}% (${formatCurrency(autoInterest)})`
-                                    : 'Masukkan nominal untuk melihat bunga otomatis.'}
-                                <div className="mt-2 text-xs text-emerald-600">
-                                    Ketentuan: saldo sampai Rp 5.000.000 = 0%, di atas Rp 5.000.000 sampai Rp 20.000.000 = 0,5%.
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Jumlah Transaksi</span>
+                                    <div className="rounded-lg bg-amber-50 p-2 text-amber-600">
+                                        <ArrowLeftRight className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-slate-900">
+                                    {simpananRows.length} Transaksi
+                                </div>
+                                <span className="text-xs text-slate-500">Tercatat di sistem</span>
+                            </div>
+                        </div>
+
+                        {/* Form Catat Transaksi Simpanan */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="border-b border-slate-100 pb-3">
+                                <h3 className="text-base font-bold text-slate-900">
+                                    Catat Transaksi Simpanan Baru
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Pilih nasabah yang terdaftar untuk mencatat setoran tabungan atau penarikan saldo.
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSimpananSubmit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Nasabah Terdaftar <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={simpananForm.nasabahId}
+                                        onChange={(e) =>
+                                            setSimpananForm((prev) => ({ ...prev, nasabahId: e.target.value }))
+                                        }
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500"
+                                    >
+                                        <option value="">-- Pilih nasabah --</option>
+                                        {nasabahList.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.nama} ({item.nik})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {simpananForm.nasabahId && (
+                                        <p className="mt-1 text-xs text-emerald-700 font-medium">
+                                            Saldo saat ini: {formatCurrency(selectedBalance)}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Jenis Transaksi <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={simpananForm.jenis}
+                                        onChange={(e) =>
+                                            setSimpananForm((prev) => ({ ...prev, jenis: e.target.value }))
+                                        }
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500"
+                                    >
+                                        <option value="setoran">Setoran (Menambah Saldo)</option>
+                                        <option value="penarikan">Penarikan (Mengambil Saldo)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Nominal Transaksi (Rp) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        value={simpananForm.nominal}
+                                        onChange={(e) =>
+                                            setSimpananForm((prev) => ({ ...prev, nominal: e.target.value }))
+                                        }
+                                        placeholder="500000"
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500"
+                                    />
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        Terbilang: {formatCurrency(Number(simpananForm.nominal) || 0)}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Tanggal Transaksi
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={simpananForm.tanggal}
+                                        onChange={(e) =>
+                                            setSimpananForm((prev) => ({ ...prev, tanggal: e.target.value }))
+                                        }
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500"
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-800">
+                                        <Sparkles className="h-4 w-4 shrink-0 text-emerald-600" />
+                                        <span>
+                                            <strong>Bunga Otomatis:</strong> Ketentuan saldo sampai Rp 5.000.000 = 0%, di atas Rp 5.000.000 sampai Rp 20.000.000 = 0,5%.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Keterangan
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={simpananForm.keterangan}
+                                        onChange={(e) =>
+                                            setSimpananForm((prev) => ({ ...prev, keterangan: e.target.value }))
+                                        }
+                                        placeholder="Contoh: Setoran bulanan, penarikan kebutuhan sekolah"
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500"
+                                    />
+                                </div>
+
+                                {simpananError && (
+                                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 md:col-span-2">
+                                        {simpananError}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end md:col-span-2">
+                                    <button
+                                        type="submit"
+                                        disabled={simpananSubmitting || loading}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                        <PlusCircle className="h-4 w-4" />
+                                        {simpananSubmitting ? 'Menyimpan...' : 'Catat transaksi'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Tabel Riwayat Transaksi Simpanan */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Riwayat Transaksi Simpanan
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        Daftar seluruh setoran dan penarikan simpanan anggota.
+                                    </p>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={searchSimpanan}
+                                            onChange={(e) => setSearchSimpanan(e.target.value)}
+                                            placeholder="Cari nama nasabah..."
+                                            className="w-48 rounded-lg border border-slate-300 py-1.5 pl-9 pr-3 text-xs outline-none focus:border-emerald-500 md:w-56"
+                                        />
+                                    </div>
+
+                                    <select
+                                        value={filterJenisSimpanan}
+                                        onChange={(e) => setFilterJenisSimpanan(e.target.value as any)}
+                                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-emerald-500"
+                                    >
+                                        <option value="semua">Semua Jenis</option>
+                                        <option value="Setoran">Setoran</option>
+                                        <option value="Penarikan">Penarikan</option>
+                                    </select>
                                 </div>
                             </div>
-                        </div>
 
-                        <label className="space-y-2 text-sm font-medium text-slate-700 md:col-span-2">
-                            <span>Keterangan</span>
-                            <textarea
-                                value={form.keterangan}
-                                onChange={(event) => setForm((prev) => ({ ...prev, keterangan: event.target.value }))}
-                                rows={3}
-                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-500"
-                                placeholder="Contoh: Setoran bulanan, penarikan kebutuhan sekolah"
-                            />
-                        </label>
-
-                        {error ? (
-                            <div className="md:col-span-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-                                {error}
-                            </div>
-                        ) : null}
-
-                        <div className="md:col-span-2 flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={submitting || loading}
-                                className="inline-flex items-center rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300"
-                            >
-                                {submitting ? 'Menyimpan...' : 'Catat transaksi'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <div className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                    {loading ? (
-                        <div className="py-10 text-center text-slate-500">Memuat transaksi simpanan...</div>
-                    ) : rows.length === 0 ? (
-                        <div className="py-10 text-center text-slate-600">Belum ada transaksi simpanan yang tercatat.</div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full text-left text-sm text-slate-700">
-                                <thead>
-                                    <tr className="border-b border-slate-200">
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Nasabah</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Jenis</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Nominal</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Bunga</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Tanggal</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Saldo Akhir</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Status</th>
-                                        <th className="px-3 py-3 font-semibold text-slate-600">Keterangan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((row) => (
-                                        <tr key={row.id} className="border-b border-slate-100 last:border-b-0">
-                                            <td className="px-3 py-4 font-medium text-slate-900">{row.nasabah}</td>
-                                            <td className="px-3 py-4">
-                                                <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.jenis === 'Setoran' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                                                    {row.jenis}
-                                                </span>
-                                            </td>
-                                            <td className="px-3 py-4">{formatCurrency(row.nominal)}</td>
-                                            <td className="px-3 py-4 text-emerald-700">{row.bungaRate > 0 ? `${row.bungaRate.toFixed(1)}%` : '0%'}</td>
-                                            <td className="px-3 py-4">{formatDate(row.tanggal)}</td>
-                                            <td className="px-3 py-4">{formatCurrency(row.saldoAkhir)}</td>
-                                            <td className="px-3 py-4 capitalize text-slate-900">{row.status}</td>
-                                            <td className="px-3 py-4 text-slate-600">{row.keterangan}</td>
+                            <div className="mt-4 overflow-x-auto">
+                                <table className="min-w-full text-left text-sm text-slate-700">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 text-xs font-semibold uppercase text-slate-500">
+                                            <th className="px-3 py-3">Nasabah</th>
+                                            <th className="px-3 py-3">Jenis</th>
+                                            <th className="px-3 py-3">Nominal</th>
+                                            <th className="px-3 py-3">Bunga</th>
+                                            <th className="px-3 py-3">Tanggal</th>
+                                            <th className="px-3 py-3">Saldo Akhir</th>
+                                            <th className="px-3 py-3">Keterangan</th>
+                                            <th className="px-3 py-3">Status</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-8 text-center text-slate-400">
+                                                    Memuat transaksi simpanan...
+                                                </td>
+                                            </tr>
+                                        ) : filteredSimpanan.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={8} className="py-8 text-center text-slate-500">
+                                                    Belum ada transaksi simpanan yang tercatat.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredSimpanan.map((row) => (
+                                                <tr key={row.id} className="hover:bg-slate-50/80 transition">
+                                                    <td className="px-3 py-3 font-semibold text-slate-900">
+                                                        {row.nasabah}
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        <span
+                                                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                                row.jenis === 'Setoran'
+                                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                                    : 'bg-rose-100 text-rose-800'
+                                                            }`}
+                                                        >
+                                                            {row.jenis}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-3 py-3 font-bold text-slate-900">
+                                                        {formatCurrency(row.nominal)}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-slate-600">
+                                                        {row.bungaRate ? `${row.bungaRate}%` : '-'}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-slate-600">
+                                                        {formatDate(row.tanggal)}
+                                                    </td>
+                                                    <td className="px-3 py-3 font-semibold text-emerald-700">
+                                                        {formatCurrency(row.saldoAkhir)}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-xs text-slate-500">
+                                                        {row.keterangan}
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                                                            {row.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {/* TAB 2: TRANSAKSI PINJAMAN */}
+                {activeTab === 'pinjaman' && (
+                    <div className="space-y-6">
+                        {/* Summary Cards Pinjaman */}
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Total Pembayaran</span>
+                                    <div className="rounded-lg bg-sky-50 p-2 text-sky-600">
+                                        <Banknote className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-slate-900">
+                                    {formatCurrency(totalBayarPinjaman)}
+                                </div>
+                                <span className="text-xs text-slate-500">Dana angsuran masuk</span>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Pembayaran Lancar</span>
+                                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-emerald-700">
+                                    {lancarCount} Transaksi
+                                </div>
+                                <span className="text-xs text-slate-500">Tepat waktu</span>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Pembayaran Telat</span>
+                                    <div className="rounded-lg bg-rose-50 p-2 text-rose-600">
+                                        <Clock className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-rose-700">
+                                    {telatCount} Transaksi
+                                </div>
+                                <span className="text-xs text-slate-500">Terlambat bayar</span>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex items-center justify-between text-slate-500">
+                                    <span className="text-xs font-semibold uppercase">Total Pinjaman Terdaftar</span>
+                                    <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600">
+                                        <CreditCard className="h-4 w-4" />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xl font-bold text-slate-900">
+                                    {pinjamanList.length} Berkas
+                                </div>
+                                <span className="text-xs text-slate-500">Data pinjaman nasabah</span>
+                            </div>
+                        </div>
+
+                        {/* Form Catat Pembayaran Pinjaman */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="border-b border-slate-100 pb-3">
+                                <h3 className="text-base font-bold text-slate-900">
+                                    Catat Pembayaran Angsuran Pinjaman
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Pilih pinjaman nasabah untuk mencatat pembayaran cicilan masuk ke sistem.
+                                </p>
+                            </div>
+
+                            <form onSubmit={handlePinjamanSubmit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Pilih Pinjaman Nasabah <span className="text-rose-500">*</span>
+                                    </label>
+                                    <select
+                                        value={pinjamanForm.pinjamanId}
+                                        onChange={(e) => handlePinjamanSelectChange(e.target.value)}
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                    >
+                                        <option value="">-- Pilih Pinjaman --</option>
+                                        {pinjamanList.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                ID #{p.id} - {p.namaNasabah} (Pinjaman: {formatCurrency(p.jumlahPinjaman)} | Tenor: {p.tenor} bln)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Jumlah Pembayaran (Rp) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        value={pinjamanForm.jumlahBayar}
+                                        onChange={(e) =>
+                                            setPinjamanForm((prev) => ({ ...prev, jumlahBayar: e.target.value }))
+                                        }
+                                        placeholder="1000000"
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                    />
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        Terbilang: {formatCurrency(Number(pinjamanForm.jumlahBayar) || 0)}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Tanggal Pembayaran
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={pinjamanForm.tanggalBayar}
+                                        onChange={(e) =>
+                                            setPinjamanForm((prev) => ({ ...prev, tanggalBayar: e.target.value }))
+                                        }
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Status Pembayaran
+                                    </label>
+                                    <select
+                                        value={pinjamanForm.statusBayar}
+                                        onChange={(e) =>
+                                            setPinjamanForm((prev) => ({ ...prev, statusBayar: e.target.value }))
+                                        }
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                    >
+                                        <option value="lancar">Lancar (Tepat Waktu)</option>
+                                        <option value="telat">Telat (Terlambat)</option>
+                                    </select>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Cicilan Ke- (Opsional)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={pinjamanForm.nomorCicilan}
+                                        onChange={(e) =>
+                                            setPinjamanForm((prev) => ({ ...prev, nomorCicilan: e.target.value }))
+                                        }
+                                        placeholder="Contoh: 1, 2, 3..."
+                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                    />
+                                </div>
+
+                                {pinjamanError && (
+                                    <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 md:col-span-2">
+                                        {pinjamanError}
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end md:col-span-2">
+                                    <button
+                                        type="submit"
+                                        disabled={pinjamanSubmitting || loading}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                        <Banknote className="h-4 w-4" />
+                                        {pinjamanSubmitting ? 'Menyimpan...' : 'Catat pembayaran'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Tabel Riwayat Transaksi Pembayaran Pinjaman */}
+                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Riwayat Pembayaran Angsuran Pinjaman
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        Daftar seluruh transaksi setoran cicilan pinjaman nasabah.
+                                    </p>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={searchPinjaman}
+                                            onChange={(e) => setSearchPinjaman(e.target.value)}
+                                            placeholder="Cari nama nasabah..."
+                                            className="w-48 rounded-lg border border-slate-300 py-1.5 pl-9 pr-3 text-xs outline-none focus:border-sky-500 md:w-56"
+                                        />
+                                    </div>
+
+                                    <select
+                                        value={filterStatusPinjaman}
+                                        onChange={(e) => setFilterStatusPinjaman(e.target.value as any)}
+                                        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-sky-500"
+                                    >
+                                        <option value="semua">Semua Status</option>
+                                        <option value="lancar">Lancar</option>
+                                        <option value="telat">Telat</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 overflow-x-auto">
+                                <table className="min-w-full text-left text-sm text-slate-700">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 text-xs font-semibold uppercase text-slate-500">
+                                            <th className="px-3 py-3">ID Bayar</th>
+                                            <th className="px-3 py-3">Nama Nasabah</th>
+                                            <th className="px-3 py-3">ID Pinjaman</th>
+                                            <th className="px-3 py-3">Jumlah Bayar</th>
+                                            <th className="px-3 py-3">Tanggal Pembayaran</th>
+                                            <th className="px-3 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={6} className="py-8 text-center text-slate-400">
+                                                    Memuat pembayaran pinjaman...
+                                                </td>
+                                            </tr>
+                                        ) : filteredPinjaman.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={6} className="py-8 text-center text-slate-500">
+                                                    Belum ada transaksi pembayaran pinjaman yang tercatat.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredPinjaman.map((row) => (
+                                                <tr key={row.id} className="hover:bg-slate-50/80 transition">
+                                                    <td className="px-3 py-3 font-mono text-xs text-slate-500">
+                                                        #{row.id}
+                                                    </td>
+                                                    <td className="px-3 py-3 font-semibold text-slate-900">
+                                                        {row.namaNasabah}
+                                                    </td>
+                                                    <td className="px-3 py-3 font-mono text-xs text-slate-600">
+                                                        Pinjaman #{row.pinjamanId}
+                                                    </td>
+                                                    <td className="px-3 py-3 font-bold text-slate-900">
+                                                        {formatCurrency(row.jumlahBayar)}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-slate-600">
+                                                        {formatDate(row.tanggalBayar)}
+                                                    </td>
+                                                    <td className="px-3 py-3">
+                                                        <span
+                                                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                                                row.statusBayar?.toLowerCase() === 'lancar'
+                                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                                    : 'bg-rose-100 text-rose-800'
+                                                            }`}
+                                                        >
+                                                            {row.statusBayar}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
+    )
+}
+
+export default function TransaksiPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center text-slate-500">Memuat transaksi...</div>}>
+            <TransaksiContent />
+        </Suspense>
     )
 }

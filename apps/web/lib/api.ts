@@ -121,6 +121,10 @@ export const api = {
     apiFetch(`/simpanan/saldo/${nasabahId}`),
   getSimpananSummary: (nasabahId: number) =>
     apiFetch(`/simpanan/summary/${nasabahId}`),
+  createSimpanan: (data: any) =>
+    apiFetch('/simpanan', { method: 'POST', body: JSON.stringify(data) }),
+  withdrawSimpanan: (data: any) =>
+    apiFetch('/simpanan/withdraw', { method: 'POST', body: JSON.stringify(data) }),
 
   // Analisis
   getAnalisisPekerjaan: () => apiFetch('/analisis-pekerjaan'),
