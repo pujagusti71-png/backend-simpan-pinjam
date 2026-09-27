@@ -95,8 +95,8 @@ export default function OriginalPinjaman({
     }
     return (
         <>
-            <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-10 text-slate-900">
-                <div className="mb-[30px] flex items-start justify-between gap-4">
+            <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-4 sm:p-6 md:p-8 lg:p-10 text-slate-900">
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div>
                         <div className="text-[0.85rem] font-medium text-slate-500">
                             Sistem / Pinjaman

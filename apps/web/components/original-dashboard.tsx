@@ -37,7 +37,7 @@ export default function OriginalDashboard({
     ]
 
     return (
-        <main className="min-h-screen bg-white p-6 text-slate-800">
+        <main className="min-h-screen bg-white p-4 sm:p-6 md:p-8 text-slate-800">
 
             {/* Page Title */}
             <div className="mb-4 flex items-center gap-2">

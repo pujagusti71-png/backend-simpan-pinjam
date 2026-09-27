@@ -44,8 +44,8 @@ export default function OriginalSimpanan({
   }
 
   return (
-    <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-10 text-slate-900">
-      <div className="mb-[30px] flex items-center justify-between gap-4">
+    <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-4 sm:p-6 md:p-8 lg:p-10 text-slate-900">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="m-0 text-2xl font-bold text-[#111]">Data Simpanan</h1>
         <button
           type="button"

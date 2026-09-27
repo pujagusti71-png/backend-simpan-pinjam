@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { ChevronDown, User, LogOut, Settings, X, Check, Lock, Mail, Phone, Building } from 'lucide-react'
+import { ChevronDown, User, LogOut, Settings, X, Check, Lock, Mail, Phone, Building, Menu } from 'lucide-react'
 import { getToken, removeToken } from '@/lib/api'
 import { APP_USER, getUserInitials } from '@/lib/user'
 
@@ -26,7 +26,7 @@ const pageTitles: Record<string, string> = {
     '/pengajuan-pinjaman': 'Pengajuan Pinjaman',
 }
 
-export default function Header() {
+export default function Header({ onToggleMobile }: { onToggleMobile?: () => void }) {
     const router = useRouter()
     const pathname = usePathname() || '/dashboard'
     const [isUserOpen, setIsUserOpen] = useState(false)
@@ -78,12 +78,22 @@ export default function Header() {
     return (
         <>
             <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between px-6" style={{ minHeight: '52px' }}>
-                    {/* Breadcrumb */}
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <span className="text-base">🏠</span>
-                        <span className="text-slate-300">/</span>
-                        <span className="font-medium text-slate-700">{pageTitle}</span>
+                <div className="flex items-center justify-between px-4 sm:px-6" style={{ minHeight: '52px' }}>
+                    {/* Left: Hamburger menu on mobile + Breadcrumb */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onToggleMobile}
+                            className="flex md:hidden h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                            aria-label="Buka Menu"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500">
+                            <span className="text-sm sm:text-base">🏠</span>
+                            <span className="text-slate-300">/</span>
+                            <span className="font-medium text-slate-700 truncate max-w-[130px] sm:max-w-none">{pageTitle}</span>
+                        </div>
                     </div>
 
                     {/* Right: user menu */}

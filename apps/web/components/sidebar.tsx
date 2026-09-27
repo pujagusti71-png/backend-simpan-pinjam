@@ -7,7 +7,7 @@ import {
     Home, Users, PiggyBank, CreditCard, BarChart2, FileText,
     LogOut, ChevronRight, ChevronDown, BookOpen, Database,
     Banknote, ArrowLeftRight, ClipboardList, ShieldCheck,
-    TrendingUp, XCircle, PlusCircle,
+    TrendingUp, XCircle, PlusCircle, X,
 } from 'lucide-react'
 import { removeToken } from '@/lib/api'
 
@@ -71,7 +71,13 @@ const navConfig = [
     },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({
+    mobileOpen = false,
+    onCloseMobile,
+}: {
+    mobileOpen?: boolean
+    onCloseMobile?: () => void
+}) {
     const pathname = usePathname() || '/'
     const router = useRouter()
 
@@ -92,22 +98,44 @@ export default function Sidebar() {
 
     const handleLogout = () => {
         removeToken()
+        if (onCloseMobile) onCloseMobile()
         router.push('/login')
     }
 
     return (
-        <aside
-            className="hidden min-h-screen w-[200px] shrink-0 flex-col md:flex overflow-y-auto"
-            style={{ backgroundColor: '#2e7d32' }}
-        >
-            {/* Logo */}
-            <div className="px-4 py-4 border-b border-green-700 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                    <span className="text-2xl">💰</span>
+        <>
+            {/* Mobile Backdrop */}
+            {mobileOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 md:hidden backdrop-blur-xs transition-opacity"
+                    onClick={onCloseMobile}
+                    aria-hidden="true"
+                />
+            )}
+
+            <aside
+                className={`fixed inset-y-0 left-0 z-50 flex min-h-screen w-[220px] flex-col overflow-y-auto transition-transform duration-300 md:static md:w-[200px] md:translate-x-0 ${mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+                    }`}
+                style={{ backgroundColor: '#2e7d32' }}
+            >
+                {/* Logo & Close Button */}
+                <div className="relative px-4 py-4 border-b border-green-700 text-center">
+                    {onCloseMobile && (
+                        <button
+                            type="button"
+                            onClick={onCloseMobile}
+                            className="absolute right-2 top-2 p-1 text-green-200 hover:text-white md:hidden cursor-pointer"
+                            aria-label="Tutup Menu"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                        <span className="text-2xl">💰</span>
+                    </div>
+                    <p className="text-white font-bold text-xs leading-tight tracking-wide uppercase">Apps</p>
+                    <p className="text-white font-bold text-sm leading-tight tracking-wide uppercase">Koperasi</p>
                 </div>
-                <p className="text-white font-bold text-xs leading-tight tracking-wide uppercase">Apps</p>
-                <p className="text-white font-bold text-sm leading-tight tracking-wide uppercase">Koperasi</p>
-            </div>
 
             {/* Nav Groups */}
             <nav className="flex flex-1 flex-col pb-3" aria-label="Navigasi utama">
@@ -130,6 +158,7 @@ export default function Sidebar() {
                                         <Link
                                             key={item.href}
                                             href={item.href}
+                                            onClick={onCloseMobile}
                                             className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-xs font-medium transition-all ${isParentActive
                                                 ? 'bg-white text-green-800 shadow-sm font-semibold'
                                                 : 'text-green-100 hover:bg-green-700'
@@ -168,8 +197,9 @@ export default function Sidebar() {
                                                         <Link
                                                             key={child.href}
                                                             href={child.href}
+                                                            onClick={onCloseMobile}
                                                             className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all ${isChildActive
-                                                                ? 'bg-white text-green-800 shadow-sm'
+                                                                ? 'bg-white text-green-800 shadow-sm font-semibold'
                                                                 : 'text-green-200 hover:bg-green-700 hover:text-white'
                                                                 }`}
                                                         >
