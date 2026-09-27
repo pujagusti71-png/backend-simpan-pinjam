@@ -71,28 +71,12 @@ export default function SimpananPage() {
           return [initials, nama, item?.nasabah?.statusKeanggotaan ?? 'Anggota', item?.noRekening ?? `SP-${index + 1}`, item?.jenisSimpanan ?? 'Simpanan Sukarela', formatCurrency(saldo), saldo > 0 ? 'AKTIF' : 'TIDAK AKTIF', 'blue'] as [string, string, string, string, string, string, string, string]
         })
 
-        const defaultSampleRows: Array<[string, string, string, string, string, string, string, string]> = [
-          ['SS', 'Samuel Santoso', 'Anggota Tetap', 'SP-00101', 'Simpanan Sukarela', formatCurrency(2500000), 'AKTIF', 'blue'],
-          ['DP', 'Dewi Permata', 'Anggota Tetap', 'SP-00102', 'Simpanan Wajib', formatCurrency(3200000), 'AKTIF', 'emerald'],
-          ['RS', 'Rian Setiawan', 'Anggota Tetap', 'SP-00103', 'Simpanan Pokok', formatCurrency(2100000), 'AKTIF', 'blue'],
-          ['NR', 'Nina Rahma', 'Anggota Tetap', 'SP-00104', 'Deposito', formatCurrency(4700000), 'AKTIF', 'purple'],
-          ['AW', 'Andi Wijaya', 'Anggota Tetap', 'SP-00105', 'Simpanan Sukarela', formatCurrency(3900000), 'AKTIF', 'emerald'],
-        ]
+        setDesignRows(liveRows)
 
-        setDesignRows(liveRows.length > 0 ? liveRows : defaultSampleRows)
-
-        const total = simpananList.length > 0
-          ? simpananList.reduce((sum: number, item: any) => sum + Number(item?.saldoAkhir || 0), 0)
-          : 16400000
-        const deposit = simpananList.length > 0
-          ? simpananList.reduce((sum: number, item: any) => sum + Number(item?.jumlahSetoran > 0 ? item.jumlahSetoran : 0), 0)
-          : 5000000
-        const withdraw = simpananList.length > 0
-          ? simpananList.reduce((sum: number, item: any) => sum + Number(item?.jumlahSetoran < 0 ? Math.abs(item.jumlahSetoran) : 0), 0)
-          : 1000000
-        const totalPinjaman = pinjamanList.length > 0
-          ? pinjamanList.reduce((sum: number, item: any) => sum + Number(item?.jumlahPinjaman ?? item?.jumlah ?? 0), 0)
-          : 8050000
+        const total = simpananList.reduce((sum: number, item: any) => sum + Number(item?.saldoAkhir || 0), 0)
+        const deposit = simpananList.reduce((sum: number, item: any) => sum + Number(item?.jumlahSetoran > 0 ? item.jumlahSetoran : 0), 0)
+        const withdraw = simpananList.reduce((sum: number, item: any) => sum + Number(item?.jumlahSetoran < 0 ? Math.abs(item.jumlahSetoran) : 0), 0)
+        const totalPinjaman = pinjamanList.reduce((sum: number, item: any) => sum + Number(item?.jumlahPinjaman ?? item?.jumlah ?? 0), 0)
 
         const inactive = nasabahList.filter((item: any) => {
           const riwayat = String(item?.riwayatPembayaran ?? '').toLowerCase()
@@ -101,8 +85,8 @@ export default function SimpananPage() {
           return riwayat.includes('telat') || hasTunggakan || risky
         }).length
 
-        const nextGrowth = deposit > 0 ? Number((((deposit - withdraw) / Math.max(deposit, 1)) * 100).toFixed(1)) : 12.5
-        const nextLdr = total > 0 ? Number(((totalPinjaman / total) * 100).toFixed(1)) : 49.1
+        const nextGrowth = deposit > 0 ? Number((((deposit - withdraw) / Math.max(deposit, 1)) * 100).toFixed(1)) : 0
+        const nextLdr = total > 0 ? Number(((totalPinjaman / total) * 100).toFixed(1)) : 0
 
         setTotalBalance(total)
         setGrowth(nextGrowth)
