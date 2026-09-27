@@ -295,7 +295,7 @@ export default function TransaksiSimpananPage() {
                                 disabled={submitting || loading}
                                 className="inline-flex items-center rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
-                                {submitting ? 'Menyimpan...' : form.jenis === 'setoran' ? 'Simpan transaksi' : 'Catat penarikan'}
+                                {submitting ? 'Menyimpan...' : 'Catat transaksi'}
                             </button>
                         </div>
                     </form>
