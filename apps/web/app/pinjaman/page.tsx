@@ -328,6 +328,13 @@ export default function PinjamanPage() {
     }
 
     loadPinjaman()
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('baru') === '1' || params.get('action') === 'new') {
+        setIsPengajuanOpen(true)
+      }
+    }
   }, [])
 
   const openModal = (row: NasabahDetail) => {
@@ -362,19 +369,7 @@ export default function PinjamanPage() {
     setIsAllPengajuanOpen(false)
   }
 
-  const showComingSoon = (feature: string) => {
-    alert(`Fitur ${feature} akan segera tersedia`)
-  }
 
-  const showSummaryInfo = (label: string) => {
-    const messages: Record<string, string> = {
-      'Pinjaman Aktif': '125 pinjaman aktif saat ini',
-      'Telat Bayar': '28 nasabah telat bayar bulan ini',
-      'Akan Jatuh Tempo (7 Hari)': '18 pinjaman akan jatuh tempo dalam 7 hari',
-      'Lunas Bulan Ini': '32 pinjaman lunas bulan ini',
-    }
-    alert(messages[label] ?? label)
-  }
 
   const handleCreatePengajuan = async () => {
     const penghasilan = Number(pengajuanForm.penghasilan)
