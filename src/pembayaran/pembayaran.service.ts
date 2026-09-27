@@ -1,10 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePembayaranDto } from './dto/create-pembayaran.dto';
+import { AnalisisRisikoService } from '../analisis-risiko/analisis-risiko.service';
 
 @Injectable()
 export class PembayaranService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private analisisRisikoService: AnalisisRisikoService,
+    ) { }
 
     private toDate(value?: string | Date) {
         if (!value) return new Date();
@@ -132,6 +136,11 @@ export class PembayaranService {
                 status: statusPinjaman,
                 tanggalSelesai: statusPinjaman === 'lunas' ? new Date() : pinjaman.tanggalSelesai,
             },
+        });
+
+        // Riwayat pembayaran (telat/lancar) baru masuk -> perbarui skor risiko nasabah.
+        await this.analisisRisikoService.recomputeForNasabah(pinjaman.nasabahId).catch((err) => {
+            console.error('Gagal menghitung ulang risiko setelah pembayaran:', err);
         });
 
         return {

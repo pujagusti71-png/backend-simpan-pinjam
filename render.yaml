@@ -1,0 +1,33 @@
+﻿services:
+  # ========== BACKEND (NestJS) ==========
+  - type: web
+    name: simpan-pinjam-backend
+    runtime: node
+    rootDir: apps/backend-simpan-pinjam
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8003
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # ========== FRONTEND (Next.js) ==========
+  - type: web
+    name: simpan-pinjam-frontend
+    runtime: node
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false

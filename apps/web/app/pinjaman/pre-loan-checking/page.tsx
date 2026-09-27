@@ -8,15 +8,17 @@ import { api } from "@/lib/api"
 
 type CheckingItem = {
   id: number
+  nasabahId: number
   nama: string
   pekerjaan: string
   penghasilan: number
-  cicilan: number
-  riwayatPembayaran: string
   rasio: number
+  persentaseKeterlambatan: number
+  totalSkor: number
   risk: "Layak" | "Review" | "Bermasalah"
   insight: string
 }
+
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -24,6 +26,9 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 0,
   }).format(value || 0)
 
+// Pre-loan checking = cek kelayakan awal SEBELUM pinjaman disetujui, memakai
+// rasio cicilan, riwayat pembayaran, dan hasil Risk Scoring Engine
+// (/analisis-risiko) yang sudah menggabungkan data SLIK & perilaku pinjaman.
 export default function PreLoanCheckingPage() {
   const [items, setItems] = useState<CheckingItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,37 +40,35 @@ export default function PreLoanCheckingPage() {
         setLoading(true)
         setError(null)
 
-        const data = await api.getNasabah()
+        const data = await api.getAnalisisRisiko()
         const rows = Array.isArray(data)
           ? data.map((item: any) => {
-              const penghasilan = Number(item.penghasilan ?? 0)
-              const cicilan = Number(item.cicilan ?? item.cicilanBulanan ?? 0)
-              const rasio = penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0
+              const rasio = Number(item.rasioCicilan ?? 0)
+              const persentaseKeterlambatan = Number(item.persentaseKeterlambatan ?? 0)
+              const totalSkor = Number(item.totalSkor ?? 0)
+              const status = (item.status ?? "review").toLowerCase()
 
               let risk: CheckingItem["risk"] = "Layak"
-              let insight = "Rasio cicilan masih aman."
+              let insight = "Rasio cicilan dan riwayat pembayaran masih aman."
 
-              if (
-                rasio > 35 ||
-                item.riwayatPembayaran === "telat" ||
-                item.slik === "K3"
-              ) {
+              if (status === "reject") {
                 risk = "Bermasalah"
                 insight =
-                  "Rasio cicilan tinggi dan riwayat pembayaran perlu ditinjau ulang."
-              } else if (rasio > 25 || item.riwayatPembayaran === "Review") {
+                  "Skor risiko tinggi — rasio cicilan, riwayat pembayaran, dan/atau data SLIK menunjukkan potensi gagal bayar."
+              } else if (status === "review") {
                 risk = "Review"
-                insight = "Perlu verifikasi tambahan sebelum approval."
+                insight = "Perlu verifikasi tambahan sebelum approval (skor risiko sedang)."
               }
 
               return {
-                id: Number(item.id ?? 0),
-                nama: item.nama ?? "Nasabah",
+                id: item.id ?? item.nasabahId ?? Date.now(),
+                nasabahId: item.nasabahId ?? 0,
+                nama: item.namaNasabah ?? "Nasabah",
                 pekerjaan: item.pekerjaan ?? "Tidak diketahui",
-                penghasilan,
-                cicilan,
-                riwayatPembayaran: item.riwayatPembayaran ?? "Belum ada data",
+                penghasilan: Number(item.penghasilan ?? 0),
                 rasio,
+                persentaseKeterlambatan,
+                totalSkor,
                 risk,
                 insight,
               }
@@ -107,7 +110,8 @@ export default function PreLoanCheckingPage() {
               Pre-Loan Checking
             </h2>
             <p className="mt-2 text-slate-500">
-              Cek kelayakan awal sebelum pengajuan.
+              Cek kelayakan awal sebelum pengajuan, berdasarkan skor risiko
+              komposit terbaru.
             </p>
           </div>
           <Link
@@ -202,24 +206,24 @@ export default function PreLoanCheckingPage() {
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-white p-3">
                       <p className="text-xs text-slate-400 uppercase">
-                        Cicilan
+                        Rasio Cicilan
                       </p>
-                      <p className="mt-2 font-semibold text-slate-900">
-                        {formatCurrency(item.cicilan)}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 bg-white p-3">
-                      <p className="text-xs text-slate-400 uppercase">Rasio</p>
                       <p className="mt-2 font-semibold text-slate-900">
                         {item.rasio.toFixed(1)}%
                       </p>
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-xs text-slate-400 uppercase">Keterlambatan</p>
+                      <p className="mt-2 font-semibold text-slate-900">
+                        {item.persentaseKeterlambatan.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white p-3">
                       <p className="text-xs text-slate-400 uppercase">
-                        Riwayat
+                        Skor Risiko
                       </p>
                       <p className="mt-2 font-semibold text-slate-900">
-                        {item.riwayatPembayaran}
+                        {item.totalSkor}/100
                       </p>
                     </div>
                   </div>

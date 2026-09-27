@@ -9,8 +9,10 @@ import { PinjamanModule } from './pinjaman/pinjaman.module';
 import { PembayaranModule } from './pembayaran/pembayaran.module';
 import { RiwayatKreditModule } from './riwayat-kredit/riwayat-kredit.module';
 import { PeminjamanEksternalModule } from './peminjamaneksternal/peminjamaneksternal.module';
-import { SimpananModule } from './simpanan/simpanan.module';
+import { AnalisisPekerjaanModule } from './analisis-pekerjaan/analisis-pekerjaan.module';
+import { AnalisisRisikoModule } from './analisis-risiko/analisis-risiko.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { RisikoNasabahModule } from './risiko-nasabah/risiko-nasabah.module';
 import { JwtAuthGuard } from './auth/guards';
 
 @Module({
@@ -23,7 +25,10 @@ import { JwtAuthGuard } from './auth/guards';
     RiwayatKreditModule,
     PeminjamanEksternalModule,
     SimpananModule,
+    AnalisisPekerjaanModule,
+    AnalisisRisikoModule,
     DashboardModule,
+    RisikoNasabahModule,
   ],
   controllers: [AppController],
   providers: [

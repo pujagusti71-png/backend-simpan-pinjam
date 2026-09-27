@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
 import { PaginatedNasabahResponse, ListNasabahDto } from './dto/list-nasabah.dto';
+import { NIKValidator } from '../common/utils/nik.validator';
 
 @Injectable()
 export class NasabahService {
@@ -34,6 +35,18 @@ export class NasabahService {
     }
 
     async create(createNasabahDto: CreateNasabahDto) {
+        const nikValidation = NIKValidator.validate(createNasabahDto.nik);
+        if (!nikValidation.valid) {
+            throw new BadRequestException(`NIK tidak valid: ${nikValidation.error}`);
+        }
+
+        const existingNasabah = await this.prisma.nasabah.findUnique({
+            where: { nik: createNasabahDto.nik },
+        });
+        if (existingNasabah) {
+            throw new BadRequestException('NIK sudah terdaftar atas nasabah lain');
+        }
+
         const data: any = { ...createNasabahDto };
 
         if (createNasabahDto.tanggalLahir) {

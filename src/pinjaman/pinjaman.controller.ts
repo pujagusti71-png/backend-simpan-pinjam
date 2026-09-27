@@ -34,19 +34,27 @@ export class PinjamanController {
         return this.pinjamanService.findAll();
     }
 
-    @Get(':id')
-    @ApiResponse({ status: 200, description: 'Detail pinjaman', type: PinjamanResponseDto })
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.pinjamanService.findOne(id);
-    }
-
+    // ── Rute statis harus SEBELUM /:id ──
     @Get('nasabah/:nasabahId')
     @ApiResponse({ status: 200, description: 'Pinjaman berdasarkan nasabah', type: [PinjamanResponseDto] })
     findByNasabah(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
         return this.pinjamanService.findByNasabah(nasabahId);
     }
 
+    @Get('active/:nasabahId')
+    @ApiResponse({ status: 200, description: 'Pinjaman aktif nasabah', type: [PinjamanResponseDto] })
+    getActiveLoan(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
+        return this.pinjamanService.getActiveLoan(nasabahId);
+    }
+
+    @Get(':id')
+    @ApiResponse({ status: 200, description: 'Detail pinjaman', type: PinjamanResponseDto })
+    findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.pinjamanService.findOne(id);
+    }
+
     @Patch(':id')
+    @ApiOperation({ summary: 'Update data pinjaman' })
     update(
         @Param('id', ParseIntPipe) id: number,
         @Body() updatePinjamanDto: UpdatePinjamanDto,
@@ -54,14 +62,32 @@ export class PinjamanController {
         return this.pinjamanService.update(id, updatePinjamanDto);
     }
 
-    @Delete(':id')
-    remove(@Param('id', ParseIntPipe) id: number) {
-        return this.pinjamanService.remove(id);
+    @Post(':id/approve')
+    @ApiOperation({
+        summary: 'Setujui pinjaman',
+        description: 'Mengubah status pinjaman dari pending menjadi active.',
+    })
+    @ApiResponse({ status: 201, description: 'Pinjaman berhasil disetujui' })
+    approvePinjaman(@Param('id', ParseIntPipe) id: number) {
+        return this.pinjamanService.approvePinjaman(id);
     }
 
-    @Get('active/:nasabahId')
-    @ApiResponse({ status: 200, description: 'Pinjaman aktif nasabah', type: [PinjamanResponseDto] })
-    getActiveLoan(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
-        return this.pinjamanService.getActiveLoan(nasabahId);
+    @Post(':id/reject')
+    @ApiOperation({
+        summary: 'Tolak pinjaman',
+        description: 'Mengubah status pinjaman dari pending menjadi rejected.',
+    })
+    @ApiResponse({ status: 201, description: 'Pinjaman berhasil ditolak' })
+    rejectPinjaman(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: { alasan?: string },
+    ) {
+        return this.pinjamanService.rejectPinjaman(id, body?.alasan);
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Hapus data pinjaman' })
+    remove(@Param('id', ParseIntPipe) id: number) {
+        return this.pinjamanService.remove(id);
     }
 }

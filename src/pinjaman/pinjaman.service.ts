@@ -2,10 +2,15 @@ import { Injectable, InternalServerErrorException, BadRequestException } from '@
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePinjamanDto } from './dto/create-pinjaman.dto';
 import { UpdatePinjamanDto } from './dto/update-pinjaman.dto';
+import { NIKValidator } from '../common/utils/nik.validator';
+import { AnalisisRisikoService } from '../analisis-risiko/analisis-risiko.service';
 
 @Injectable()
 export class PinjamanService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private analisisRisikoService: AnalisisRisikoService,
+    ) { }
 
     private normalizePayload(createPinjamanDto: any) {
         const payload = createPinjamanDto || {};
@@ -21,6 +26,8 @@ export class PinjamanService {
         const jumlah = Number(payload.jumlah ?? payload.jumlahPinjaman ?? 0);
         const tenor = Number(payload.tenor ?? payload.tenorBulan ?? 0);
         const bunga = Number(payload.bunga ?? payload.sukuBunga ?? 0);
+        const jenisBungaRaw = (payload.jenisBunga ?? '').toString().trim().toLowerCase();
+        const jenisBunga = jenisBungaRaw === 'efektif' ? 'efektif' : (jenisBungaRaw === 'flat' ? 'flat' : undefined);
         const tujuan = payload.tujuan || payload.purpose || null;
 
         if (!nama || !nik || !tanggalLahir || !alamat || !pekerjaan) {
@@ -29,6 +36,11 @@ export class PinjamanService {
 
         if (Number.isNaN(tanggalLahir.getTime())) {
             throw new BadRequestException('Format tanggal lahir tidak valid');
+        }
+
+        const nikValidation = NIKValidator.validate(nik);
+        if (!nikValidation.valid) {
+            throw new BadRequestException(`NIK tidak valid: ${nikValidation.error}`);
         }
 
         if (!jumlah || !tenor) {
@@ -47,6 +59,7 @@ export class PinjamanService {
             jumlah,
             tenor,
             bunga,
+            jenisBunga,
             tujuan,
         };
     }
@@ -205,15 +218,21 @@ export class PinjamanService {
     async create(createPinjamanDto: CreatePinjamanDto) {
         try {
             const payload = this.normalizePayload(createPinjamanDto);
-            const eligibility = await this.validateLoanEligibility(payload.pekerjaan, payload.jumlah);
+            await this.validateLoanEligibility(payload.pekerjaan, payload.jumlah);
             const nasabahId = await this.ensureNasabah(payload);
-            const bunga = this.getLoanInterestRate(payload.jumlah);
+
+            // Gunakan suku bunga & jenis bunga dari input admin jika diisi.
+            // Kalau admin tidak mengisi, baru fallback ke tier otomatis berdasarkan plafon.
+            const jenisBunga: 'flat' | 'efektif' = payload.jenisBunga === 'efektif' ? 'efektif' : 'flat';
+            const sukuBunga = payload.bunga && payload.bunga > 0
+                ? payload.bunga
+                : this.getLoanInterestRate(payload.jumlah);
 
             const calculations = this.calculateInstallment(
                 payload.jumlah,
-                bunga,
+                sukuBunga,
                 payload.tenor,
-                'flat',
+                jenisBunga,
             );
 
             const createdPinjaman = await this.prisma.pinjaman.create({
@@ -221,8 +240,8 @@ export class PinjamanService {
                     nasabahId,
                     jumlahPinjaman: payload.jumlah,
                     tenor: payload.tenor,
-                    sukuBunga: bunga,
-                    jenisBunga: 'flat',
+                    sukuBunga,
+                    jenisBunga,
                     status: 'pending',
                     cicilanBulanan: calculations.cicilanBulanan,
                     totalBunga: calculations.totalBunga,
@@ -230,14 +249,12 @@ export class PinjamanService {
                 },
             });
 
-            await this.prisma.risikoNasabah.create({
-                data: {
-                    nasabahId,
-                    skorRisiko: eligibility.analisis.skorRisiko,
-                    kategoriRisiko: eligibility.analisis.kategoriRisiko.toLowerCase(),
-                    rekomendasi: eligibility.rekomendasi,
-                },
-            }).catch(() => undefined);
+            // Risk Scoring Engine: hitung skor risiko komposit (rasio cicilan, riwayat
+            // pembayaran, data SLIK/BI-checking, pinjaman eksternal, perilaku pinjaman)
+            // dan simpan rekomendasi keputusan (approve/review/reject).
+            await this.analisisRisikoService.recomputeForNasabah(nasabahId).catch((err) => {
+                console.error('Gagal menghitung risiko nasabah setelah create pinjaman:', err);
+            });
 
             return {
                 id: createdPinjaman.id,
@@ -358,5 +375,43 @@ export class PinjamanService {
                 status: 'active',
             },
         });
+    }
+
+    async approvePinjaman(id: number) {
+        const pinjaman = await this.prisma.pinjaman.findUnique({ where: { id } });
+        if (!pinjaman) {
+            throw new BadRequestException('Pinjaman tidak ditemukan');
+        }
+        if (pinjaman.status !== 'pending') {
+            throw new BadRequestException(`Pinjaman tidak bisa disetujui karena status saat ini: ${pinjaman.status}`);
+        }
+        const updated = await this.prisma.pinjaman.update({
+            where: { id },
+            data: {
+                status: 'active',
+                tanggalAsetujuan: new Date(),
+            },
+        });
+        await this.analisisRisikoService.recomputeForNasabah(pinjaman.nasabahId).catch(() => undefined);
+        return updated;
+    }
+
+    async rejectPinjaman(id: number, alasan?: string) {
+        const pinjaman = await this.prisma.pinjaman.findUnique({ where: { id } });
+        if (!pinjaman) {
+            throw new BadRequestException('Pinjaman tidak ditemukan');
+        }
+        if (pinjaman.status !== 'pending') {
+            throw new BadRequestException(`Pinjaman tidak bisa ditolak karena status saat ini: ${pinjaman.status}`);
+        }
+        const updated = await this.prisma.pinjaman.update({
+            where: { id },
+            data: {
+                status: 'rejected',
+                tanggalSelesai: new Date(),
+            },
+        });
+        await this.analisisRisikoService.recomputeForNasabah(pinjaman.nasabahId).catch(() => undefined);
+        return updated;
     }
 }

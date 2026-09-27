@@ -38,6 +38,11 @@ export class PeminjamanEksternalController {
         return this.peminjamanEksternalService.getTotalExternalLoan(nasabahId);
     }
 
+    @Get('summary/:nasabahId')
+    getBICheckingSummary(@Param('nasabahId', ParseIntPipe) nasabahId: number) {
+        return this.peminjamanEksternalService.getBICheckingSummary(nasabahId);
+    }
+
     @Delete(':id')
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.peminjamanEksternalService.remove(id);

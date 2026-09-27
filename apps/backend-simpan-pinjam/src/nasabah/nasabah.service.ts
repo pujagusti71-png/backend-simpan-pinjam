@@ -3,50 +3,71 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateNasabahDto } from './dto/create-nasabah.dto';
 import { UpdateNasabahDto } from './dto/update-nasabah.dto';
 import { PaginatedNasabahResponse, ListNasabahDto } from './dto/list-nasabah.dto';
-
-function normalizeNasabahPayload(payload: any) {
-    const data = payload || {};
-    const nama = data.nama ?? data.name ?? data.namaLengkap;
-    const nik = data.nik ?? data.NIK;
-    const pekerjaan = data.pekerjaan ?? data.kerja ?? 'Tidak tercantum';
-    const penghasilan = Number(data.penghasilan ?? data.gaji ?? 0);
-    const riwayatPembayaran = data.riwayatPembayaran ?? data.riwayat ?? 'Belum ada data';
-    const jumlahTanggungan = data.jumlahTanggungan ?? data.jumlahTanggungan ?? null;
-
-    return {
-        nama,
-        nik,
-        pekerjaan,
-        penghasilan,
-        riwayatPembayaran,
-        jumlahTanggungan,
-    };
-}
+import { NIKValidator } from '../common/utils/nik.validator';
 
 @Injectable()
 export class NasabahService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createNasabahDto: CreateNasabahDto) {
-        const normalized = normalizeNasabahPayload(createNasabahDto);
+    private async resolveAnalisisRisikoPekerjaan(pekerjaan: string) {
+        const pekerjaanTrimmed = pekerjaan?.trim();
+        const prismaClient = this.prisma as any;
+
+        if (!pekerjaanTrimmed) {
+            return null;
+        }
 
         try {
-            return await this.prisma.nasabah.create({
-                data: {
-                    nama: normalized.nama,
-                    nik: normalized.nik,
-                    pekerjaan: normalized.pekerjaan,
-                    penghasilan: normalized.penghasilan,
-                    riwayatPembayaran: normalized.riwayatPembayaran,
-                    jumlahTanggungan: normalized.jumlahTanggungan,
+            return await prismaClient.analisisRisikoPekerjaan.findFirst({
+                where: {
+                    pekerjaan: {
+                        equals: pekerjaanTrimmed,
+                        mode: 'insensitive',
+                    },
                 },
             });
         } catch (error: any) {
-            if (error?.code === 'P2002' && error?.meta?.target?.includes('nik')) {
-                throw new BadRequestException('NIK sudah terdaftar. Gunakan NIK yang berbeda.');
+            if (error?.code === 'P2021' || error?.code === 'P2022') {
+                return null;
             }
             throw error;
         }
+    }
+
+    async create(createNasabahDto: CreateNasabahDto) {
+        const nikValidation = NIKValidator.validate(createNasabahDto.nik);
+        if (!nikValidation.valid) {
+            throw new BadRequestException(`NIK tidak valid: ${nikValidation.error}`);
+        }
+
+        const existingNasabah = await this.prisma.nasabah.findUnique({
+            where: { nik: createNasabahDto.nik },
+        });
+        if (existingNasabah) {
+            throw new BadRequestException('NIK sudah terdaftar atas nasabah lain');
+        }
+
+        const data: any = { ...createNasabahDto };
+
+        if (createNasabahDto.tanggalLahir) {
+            data.tanggalLahir = new Date(createNasabahDto.tanggalLahir);
+        }
+
+        const analisisRisiko = await this.resolveAnalisisRisikoPekerjaan(createNasabahDto.pekerjaan);
+
+        if (!analisisRisiko) {
+            data.analisisRisikoPekerjaanId = null;
+            data.skorRisikoPekerjaan = null;
+            data.kategoriRisikoPekerjaan = null;
+        } else {
+            data.analisisRisikoPekerjaanId = analisisRisiko.id;
+            data.skorRisikoPekerjaan = analisisRisiko.skorRisiko;
+            data.kategoriRisikoPekerjaan = analisisRisiko.kategoriRisiko;
+        }
+
+        return await this.prisma.nasabah.create({
+            data,
+        });
     }
 
     async findAllPaginated(
@@ -87,6 +108,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
             },
@@ -100,7 +123,7 @@ export class NasabahService {
         const hasPrevPage = page > 1;
 
         return {
-            data: data as ListNasabahDto[],
+            data: data as unknown as ListNasabahDto[],
             total,
             page,
             limit,
@@ -120,6 +143,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -140,6 +165,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -161,6 +188,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
                 pinjaman: true,
@@ -174,7 +203,21 @@ export class NasabahService {
         const updateData: any = {};
 
         if (updateNasabahDto.nama !== undefined) updateData.nama = updateNasabahDto.nama;
-        if (updateNasabahDto.pekerjaan !== undefined) updateData.pekerjaan = updateNasabahDto.pekerjaan;
+        if (updateNasabahDto.pekerjaan !== undefined) {
+            updateData.pekerjaan = updateNasabahDto.pekerjaan;
+
+            const analisisRisiko = await this.resolveAnalisisRisikoPekerjaan(updateNasabahDto.pekerjaan);
+
+            if (!analisisRisiko) {
+                updateData.analisisRisikoPekerjaanId = null;
+                updateData.skorRisikoPekerjaan = null;
+                updateData.kategoriRisikoPekerjaan = null;
+            } else {
+                updateData.analisisRisikoPekerjaanId = analisisRisiko.id;
+                updateData.skorRisikoPekerjaan = analisisRisiko.skorRisiko;
+                updateData.kategoriRisikoPekerjaan = analisisRisiko.kategoriRisiko;
+            }
+        }
         if (updateNasabahDto.penghasilan !== undefined) updateData.penghasilan = updateNasabahDto.penghasilan;
         if (updateNasabahDto.riwayatPembayaran !== undefined) updateData.riwayatPembayaran = updateNasabahDto.riwayatPembayaran;
         if (updateNasabahDto.jumlahTanggungan !== undefined) updateData.jumlahTanggungan = updateNasabahDto.jumlahTanggungan;
@@ -204,6 +247,8 @@ export class NasabahService {
                 penghasilan: true,
                 saldoRataRata: true,
                 estimasiPengeluaran: true,
+                skorRisikoPekerjaan: true,
+                kategoriRisikoPekerjaan: true,
                 createdAt: true,
                 updatedAt: true,
             },

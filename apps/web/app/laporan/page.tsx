@@ -71,13 +71,14 @@ export default function LaporanPage() {
       try {
         setLoading(true)
 
-        const [nasabahRes, pinjamanRes, pembayaranRes, analisisRes, riskRes, simpananRes] = await Promise.all([
+        const [nasabahRes, pinjamanRes, pembayaranRes, analisisRes, riskRes, simpananRes, trendRes] = await Promise.all([
           apiFetch('/nasabah').catch(() => []),
           apiFetch('/pinjaman').catch(() => []),
           apiFetch('/pembayaran').catch(() => []),
           apiFetch('/analisis-pekerjaan').catch(() => ({ data: [] })),
           apiFetch('/analisis-risiko').catch(() => []),
           apiFetch('/simpanan').catch(() => []),
+          apiFetch('/dashboard/delinquency-trend').catch(() => []),
         ])
 
         const totalNasabah = Array.isArray(nasabahRes) ? nasabahRes.length : 0
@@ -88,14 +89,9 @@ export default function LaporanPage() {
           : 0
         const rawRiskJobs = Array.isArray(analisisRes?.data) ? analisisRes.data : []
 
-        const derivedLineData = [
-          { month: "Des '24", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 0.4))) },
-          { month: "Jan '25", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 0.8))) },
-          { month: "Feb '25", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 1.1))) },
-          { month: "Mar '25", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 0.9))) },
-          { month: "Apr '25", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 1.2))) },
-          { month: "Mei '25", value: Math.min(28, Math.max(5, Math.round(totalPembayaran * 1.0))) },
-        ]
+        const derivedLineData = Array.isArray(trendRes) && trendRes.length > 0
+          ? trendRes
+          : defaultLineData
 
         const derivedRiskJobs = rawRiskJobs.length > 0
           ? rawRiskJobs

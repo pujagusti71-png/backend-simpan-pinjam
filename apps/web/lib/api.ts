@@ -136,4 +136,47 @@ export const api = {
   // Analisis
   getAnalisisPekerjaan: () => apiFetch('/analisis-pekerjaan'),
   getAnalisisRisiko: () => apiFetch('/analisis-risiko'),
+  getAnalisisRisikoByNasabah: (nasabahId: number) =>
+    apiFetch(`/analisis-risiko/nasabah/${nasabahId}`),
+  recomputeAnalisisRisiko: () =>
+    apiFetch('/analisis-risiko/recompute', { method: 'POST' }),
+  recomputeAnalisisRisikoNasabah: (nasabahId: number) =>
+    apiFetch(`/analisis-risiko/recompute/${nasabahId}`, { method: 'POST' }),
+
+  // Riwayat Kredit (SLIK / BI-checking)
+  getRiwayatKreditByNasabah: (nasabahId: number) =>
+    apiFetch(`/riwayat-kredit/nasabah/${nasabahId}`),
+  createRiwayatKredit: (data: any) =>
+    apiFetch('/riwayat-kredit', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Pinjaman Eksternal
+  getPeminjamanEksternalByNasabah: (nasabahId: number) =>
+    apiFetch(`/peminjamaneksternal/nasabah/${nasabahId}`),
+  createPeminjamanEksternal: (data: any) =>
+    apiFetch('/peminjamaneksternal', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Risiko Nasabah (Data Analyst Engine)
+  getRisikoNasabah: (nasabahId: number) => apiFetch(`/risiko-nasabah/${nasabahId}`),
+  calculateRiskScore: (nasabahId: number) =>
+    apiFetch(`/risiko-nasabah/calculate/${nasabahId}`, { method: 'POST' }),
+  getKeputusan: (nasabahId: number) =>
+    apiFetch(`/risiko-nasabah/${nasabahId}/keputusan`),
+  getRasioCicilan: (nasabahId: number) =>
+    apiFetch(`/risiko-nasabah/${nasabahId}/rasio-cicilan`),
+  getBIChecking: (nasabahId: number) =>
+    apiFetch(`/risiko-nasabah/${nasabahId}/bi-checking`),
+  preLoanCheck: (data: { nasabahId: number; jumlahPinjaman: number; tenor: number; jenisBunga?: string }) =>
+    apiFetch('/risiko-nasabah/pre-loan-check', { method: 'POST', body: JSON.stringify(data) }),
+  getLaporanRisikoSemua: () => apiFetch('/risiko-nasabah/laporan/semua'),
+
+  // Pinjaman Actions
+  approvePinjaman: (id: number) =>
+    apiFetch(`/pinjaman/${id}/approve`, { method: 'POST' }),
+  rejectPinjaman: (id: number, alasan?: string) =>
+    apiFetch(`/pinjaman/${id}/reject`, { method: 'POST', body: JSON.stringify({ alasan }) }),
+
+  // Dashboard Monitoring
+  getDashboardSummary: () => apiFetch('/dashboard/summary'),
+  getDashboardLaporan: () => apiFetch('/dashboard/laporan'),
+  getDashboardChart: () => apiFetch('/dashboard/chart'),
 }
