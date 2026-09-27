@@ -31,8 +31,8 @@ async function bootstrap() {
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
     try {
-      await app.listen(port);
-      console.log(`Application is listening on port ${port}`);
+      await app.listen(port, '0.0.0.0');
+      console.log(`Application is listening on port ${port} (0.0.0.0)`);
       return;
     } catch (error: any) {
       if (error?.code === 'EADDRINUSE' && attempt < 9) {
@@ -44,4 +44,7 @@ async function bootstrap() {
     }
   }
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('FATAL ERROR DURING BOOTSTRAP:', err);
+  process.exit(1);
+});

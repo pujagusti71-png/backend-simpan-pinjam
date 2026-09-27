@@ -34,8 +34,8 @@ async function bootstrap() {
 
   for (const port of portsToTry) {
     try {
-      await app.listen(port);
-      console.log(`Application listening on port ${port}`);
+      await app.listen(port, '0.0.0.0');
+      console.log(`Application listening on port ${port} (0.0.0.0)`);
       return;
     } catch (error) {
       if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
