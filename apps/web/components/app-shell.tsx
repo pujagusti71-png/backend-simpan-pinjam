@@ -4,24 +4,19 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
 import Header from '@/components/header'
-import { removeToken } from '@/lib/api'
+import { getToken } from '@/lib/api'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname() || '/'
     const router = useRouter()
 
     useEffect(() => {
-        const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[]
-        const firstEntry = navigationEntries[0]
-
-        if (firstEntry?.type === 'reload') {
-            removeToken()
-
-            if (pathname !== '/login') {
+        // Jika bukan halaman login, pastikan ada token
+        if (pathname !== '/login') {
+            const token = getToken()
+            if (!token) {
                 router.replace('/login')
             }
-
-            return
         }
     }, [pathname, router])
 
