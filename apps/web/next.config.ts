@@ -1,8 +1,11 @@
 import type { NextConfig } from "next"
 
-const backendUrl = (
+const rawBackendUrl =
   process.env.NEXT_PUBLIC_API_URL ||
   'https://simpan-pinjam-backend-production.up.railway.app'
+// Pastikan selalu ada protocol https:// (Railway kadang menyimpan URL tanpa protocol)
+const backendUrl = (
+  rawBackendUrl.startsWith('http') ? rawBackendUrl : `https://${rawBackendUrl}`
 ).replace(/\/$/, '')
 
 const nextConfig: NextConfig = {
