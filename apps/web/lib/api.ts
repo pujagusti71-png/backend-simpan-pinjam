@@ -1,8 +1,18 @@
-const API_BASE_URL = (
+// Untuk server-side rendering (SSR), gunakan URL backend langsung.
+// Untuk client-side (browser), gunakan relative URL agar Next.js rewrite proxy yang handle.
+const BACKEND_URL = (
   process.env.NEXT_PUBLIC_API_URL ||
   'https://simpan-pinjam-backend-production.up.railway.app'
 ).replace(/\/$/, '')
-const DEV_ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' }
+
+function getBaseUrl(endpoint: string): string {
+  // Di browser: gunakan relative URL → Next.js rewrite proxy
+  // Di server (SSR/API route): gunakan URL backend langsung
+  if (typeof window !== 'undefined') {
+    return endpoint  // relative, e.g. "/auth/login"
+  }
+  return `${BACKEND_URL}${endpoint}`
+}
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null
@@ -52,37 +62,13 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const url = getBaseUrl(endpoint)
+  let res = await fetch(url, {
     ...options,
     headers,
   })
 
   let responseBody = await parseResponseBody(res)
-
-  if (res.status === 401 && endpoint !== '/auth/login' && process.env.NODE_ENV !== 'production') {
-    try {
-      const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(DEV_ADMIN_CREDENTIALS),
-      })
-
-      const loginBody = await parseResponseBody(loginRes)
-      const loginToken = loginBody?.token || loginBody?.access_token
-
-      if (loginRes.ok && loginToken) {
-        setToken(loginToken)
-        headers.set('Authorization', `Bearer ${loginToken}`)
-        res = await fetch(`${API_BASE_URL}${endpoint}`, {
-          ...options,
-          headers,
-        })
-        responseBody = await parseResponseBody(res)
-      }
-    } catch (error) {
-      console.error('Gagal melakukan auto-login untuk API lokal', error)
-    }
-  }
 
   if (!res.ok) {
     const errorMessage =
