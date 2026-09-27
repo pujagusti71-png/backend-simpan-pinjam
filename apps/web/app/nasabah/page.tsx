@@ -200,13 +200,14 @@ const initialForm: NasabahForm = {
 }
 
 export default function NasabahPage() {
-  const [nasabahList, setNasabahList] = useState<Nasabah[]>(defaultSampleNasabah)
+  const [nasabahList, setNasabahList] = useState<Nasabah[]>([])
   const [form, setForm] = useState<NasabahForm>(initialForm)
   const [selectedNasabah, setSelectedNasabah] = useState<ProcessedNasabah | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRisiko, setFilterRisiko] = useState('Semua')
   const [submitState, setSubmitState] = useState<SubmitState>({ isSubmitting: false, message: null, error: null })
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const {
     nama,
@@ -250,9 +251,10 @@ export default function NasabahPage() {
 
   useEffect(() => {
     const loadNasabah = async () => {
+      setIsLoading(true)
       try {
         const data = await api.getNasabah()
-        if (Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data)) {
           const mappedData = data.map((item: any) => ({
             id: String(item.id ?? crypto.randomUUID()),
             nama: item.nama ?? 'Nama belum tersedia',
@@ -288,7 +290,9 @@ export default function NasabahPage() {
           setNasabahList(mappedData)
         }
       } catch (error) {
-        console.error('Gagal memuat data nasabah, menggunakan data lokal default', error)
+        console.error('Gagal memuat data nasabah dari server', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
