@@ -210,13 +210,6 @@ export default function PinjamanPage() {
     }
 
     loadPinjaman()
-
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('baru') === '1' || params.get('action') === 'new') {
-        setIsPengajuanOpen(true)
-      }
-    }
   }, [])
 
   const openModal = (row: NasabahDetail) => {

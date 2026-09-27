@@ -117,6 +117,13 @@ export default function OriginalPinjaman({
                         >
                             Export Data
                         </button>
+                        <button
+                            type="button"
+                            onClick={onNew}
+                            className="flex items-center gap-2 rounded-md bg-green-700 px-4 py-2.5 font-semibold text-white hover:bg-green-800 transition-colors"
+                        >
+                            <span className="text-lg leading-none">+</span> Pengajuan Baru
+                        </button>
                     </div>
                 </div>
                 <section className="mb-6 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
