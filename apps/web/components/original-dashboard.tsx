@@ -10,9 +10,10 @@ type DashboardMetrics = {
     nasabahAktif: number
 }
 
-const formatCompactCurrency = (value: number) => {
-    if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(2)}M`
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value)
+const fmt = (v: number) => {
+    if (v >= 1_000_000_000) return `Rp ${(v / 1_000_000_000).toFixed(1)} M`
+    if (v >= 1_000_000) return `Rp ${(v / 1_000_000).toFixed(1)} Jt`
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v)
 }
 
 export default function OriginalDashboard({
@@ -23,60 +24,93 @@ export default function OriginalDashboard({
     areaData: Array<{ month: string; value: number }>
 }) {
     const cards = [
-        { label: 'TOTAL PINJAMAN AKTIF', value: formatCompactCurrency(metrics.totalPinjaman), change: '↗ Data real-time' },
-        { label: 'TOTAL DANA SIMPANAN', value: formatCompactCurrency(metrics.totalSimpanan), change: '↗ Data real-time' },
-        { label: 'LDR RATIO', value: `${metrics.ldr.toFixed(1)}%`, change: metrics.ldr >= 80 ? 'STATUS WASPADA' : 'STATUS SEHAT' },
-        { label: 'NASABAH AKTIF', value: metrics.nasabahAktif.toLocaleString('id-ID'), change: '↗ Data real-time' },
+        { label: 'Total Pinjaman Aktif', value: fmt(metrics.totalPinjaman), sub: 'Data real-time', color: '#2e7d32' },
+        { label: 'Total Dana Simpanan', value: fmt(metrics.totalSimpanan), sub: 'Data real-time', color: '#1565c0' },
+        { label: 'LDR Ratio', value: `${metrics.ldr.toFixed(1)}%`, sub: metrics.ldr >= 80 ? 'Waspada' : 'Sehat', color: metrics.ldr >= 80 ? '#e65100' : '#2e7d32' },
+        { label: 'Nasabah Aktif', value: metrics.nasabahAktif.toLocaleString('id-ID'), sub: 'Anggota terdaftar', color: '#6a1b9a' },
     ]
 
     return (
-        <main className="min-h-screen overflow-y-auto bg-[#f8f9fa] p-10 text-slate-900">
-            <div className="mb-[30px]">
-                <div className="text-[0.85rem] font-medium text-slate-500">Beranda / Dashboard</div>
-                <h1 className="my-1 text-2xl font-bold text-[#111]">Dashboard Ringkasan</h1>
-                <p className="m-0 text-[0.95rem] text-slate-500">Pantau kinerja real-time pinjaman dan simpanan nasabah.</p>
+        <main className="min-h-screen bg-[#f4f6f8] p-6 text-slate-800">
+
+            {/* Page Heading */}
+            <div className="mb-5">
+                <h1 className="text-2xl font-bold text-slate-800 tracking-wide">BERANDA</h1>
             </div>
 
-            <section className="mb-[30px] flex flex-col gap-5 md:flex-row">
+            {/* Welcome Card */}
+            <div className="mb-6 overflow-hidden rounded-lg bg-white shadow-sm border border-slate-200">
+                <div
+                    className="flex items-center justify-between px-4 py-2.5"
+                    style={{ backgroundColor: '#2e7d32' }}
+                >
+                    <div className="flex items-center gap-2 text-white font-semibold text-sm">
+                        <span>■</span>
+                        <span>Selamat Datang</span>
+                    </div>
+                    <div className="flex gap-1">
+                        <button type="button" className="flex h-6 w-6 items-center justify-center rounded text-white hover:bg-green-700 text-xs font-bold">▲</button>
+                        <button type="button" className="flex h-6 w-6 items-center justify-center rounded text-white hover:bg-green-700 text-xs font-bold">▼</button>
+                        <button type="button" className="flex h-6 w-6 items-center justify-center rounded text-white hover:bg-green-700 text-xs font-bold">✕</button>
+                    </div>
+                </div>
+                <div className="px-5 py-4 bg-green-50 border-t border-green-100">
+                    <p className="text-sm text-slate-700">Selamat datang di sistem Koperasi Simpan Pinjam 🎉</p>
+                </div>
+            </div>
+
+            {/* Metric Cards */}
+            <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {cards.map((card) => (
-                    <div key={card.label} className="flex-1 rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                        <h2 className="m-0 mb-2.5 text-[0.85rem] font-semibold text-slate-500">{card.label}</h2>
-                        <p className="m-0 mb-2.5 text-[1.8rem] font-bold text-[#111]">{card.value}</p>
-                        <span className={`inline-flex items-center rounded px-2 py-1 text-xs font-semibold ${card.label === 'LDR RATIO' && metrics.ldr >= 80 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-800'}`}>
-                            {card.change}
+                    <div key={card.label} className="rounded-lg bg-white p-5 shadow-sm border border-slate-200">
+                        <div className="mb-1 flex items-center gap-2">
+                            <span className="inline-block h-3 w-1 rounded-full" style={{ backgroundColor: card.color }} />
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{card.label}</p>
+                        </div>
+                        <p className="mt-1 text-2xl font-bold text-slate-800">{card.value}</p>
+                        <span
+                            className="mt-2 inline-block rounded px-2 py-0.5 text-xs font-semibold"
+                            style={{ backgroundColor: `${card.color}18`, color: card.color }}
+                        >
+                            {card.sub}
                         </span>
                     </div>
                 ))}
-            </section>
+            </div>
 
-            <section className="rounded-xl border border-slate-100 bg-white p-6 shadow-sm">
-                <h2 className="m-0 text-[1.1rem] font-bold text-[#111]">Tren Pertumbuhan Simpanan vs Pinjaman</h2>
-                <p className="my-1 mb-5 text-[0.9rem] text-slate-500">Performa 6 Bulan Terakhir</p>
-                <div className="h-[250px] rounded-lg bg-[#f9fafb]">
+            {/* Chart */}
+            <div className="rounded-lg bg-white p-5 shadow-sm border border-slate-200">
+                <div className="mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <span className="inline-block h-4 w-1 rounded-full" style={{ backgroundColor: '#2e7d32' }} />
+                    <h2 className="text-sm font-bold text-slate-700">Tren Pertumbuhan Simpanan vs Pinjaman</h2>
+                    <span className="ml-auto text-xs text-slate-400">6 Bulan Terakhir</span>
+                </div>
+                <div className="h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                             <defs>
-                                <linearGradient id="dashboardGrowth" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#128c7e" stopOpacity={0.25} />
-                                    <stop offset="100%" stopColor="#128c7e" stopOpacity={0} />
+                                <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#2e7d32" stopOpacity={0.3} />
+                                    <stop offset="100%" stopColor="#2e7d32" stopOpacity={0.02} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid stroke="#d1d5db" strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                            <YAxis tickLine={false} axisLine={false} tick={{ fill: '#6b7280', fontSize: 12 }} />
-                            <Tooltip />
-                            <Area type="monotone" dataKey="value" stroke="#128c7e" strokeWidth={2} fill="url(#dashboardGrowth)" />
+                            <CartesianGrid stroke="#e8ecef" strokeDasharray="4 4" vertical={false} />
+                            <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                            <YAxis tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={(v) => `${v}Jt`} />
+                            <Tooltip
+                                contentStyle={{ borderRadius: 10, borderColor: '#e2e8f0', fontSize: 12 }}
+                                formatter={(v) => [`${v} Jt`, 'Nilai']}
+                            />
+                            <Area type="monotone" dataKey="value" stroke="#2e7d32" strokeWidth={2.5} fill="url(#greenGradient)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>
-            </section>
+            </div>
 
-            <nav className="sr-only" aria-label="Navigasi desain asli">
-                <Link href="/dashboard">Dashboard</Link>
-                <Link href="/simpanan">Simpanan</Link>
-                <Link href="/pinjaman">Pinjaman</Link>
-                <Link href="/laporan">Laporan</Link>
-            </nav>
+            {/* Footer */}
+            <div className="mt-8 text-center text-xs text-slate-400">
+                © {new Date().getFullYear()} Koperasi Simpan Pinjam &nbsp;|&nbsp; Sistem Manajemen Koperasi
+            </div>
         </main>
     )
 }

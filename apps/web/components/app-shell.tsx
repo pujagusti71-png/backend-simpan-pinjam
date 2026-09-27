@@ -11,7 +11,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     const router = useRouter()
 
     useEffect(() => {
-        // Jika bukan halaman login, pastikan ada token
         if (pathname !== '/login') {
             const token = getToken()
             if (!token) {
@@ -20,14 +19,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         }
     }, [pathname, router])
 
-    if (pathname === '/login') return children
+    if (pathname === '/login') return <>{children}</>
 
     return (
-        <div className="flex min-h-screen bg-[#f8f9fa]" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+        <div className="flex min-h-screen" style={{ backgroundColor: '#f4f6f8' }}>
             <Sidebar />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 flex flex-col">
                 <Header />
-                <div className="min-h-[calc(100vh-73px)]">{children}</div>
+                <div className="flex-1 overflow-y-auto">
+                    {children}
+                </div>
             </div>
         </div>
     )
