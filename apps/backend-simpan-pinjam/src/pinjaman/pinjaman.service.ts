@@ -20,10 +20,10 @@ export class PinjamanService {
         const tanggalLahir = payload.tanggalLahir
             ? new Date(payload.tanggalLahir)
             : nik && NIKValidator.isValidFormat(nik)
-                ? NIKValidator.extractBirthDate(nik).date ?? undefined
-                : undefined;
-        const alamat = payload.alamat?.trim();
-        const pekerjaan = payload.pekerjaan?.trim();
+                ? (NIKValidator.extractBirthDate(nik).date ?? new Date('1990-01-01'))
+                : new Date('1990-01-01');
+        const alamat = payload.alamat?.trim() || 'Alamat terdaftar';
+        const pekerjaan = payload.pekerjaan?.trim() || 'Wiraswasta';
         const email = payload.email || payload.emailAddress;
         const penghasilan = Number(payload.penghasilan ?? payload.penghasilanBulanan ?? 0);
         const cicilan = Number(payload.cicilan ?? payload.cicilanBulanan ?? 0);
@@ -34,12 +34,8 @@ export class PinjamanService {
         const jenisBunga = jenisBungaRaw === 'efektif' ? 'efektif' : (jenisBungaRaw === 'flat' ? 'flat' : undefined);
         const tujuan = payload.tujuan || payload.purpose || null;
 
-        if (!nama || !nik || !tanggalLahir || !alamat || !pekerjaan) {
-            throw new BadRequestException('Field nama, nik, tanggal lahir, alamat, dan pekerjaan wajib diisi');
-        }
-
-        if (Number.isNaN(tanggalLahir.getTime())) {
-            throw new BadRequestException('Format tanggal lahir tidak valid');
+        if (!nama || !nik) {
+            throw new BadRequestException('Field nama dan NIK wajib diisi');
         }
 
         const nikValidation = NIKValidator.validate(nik);

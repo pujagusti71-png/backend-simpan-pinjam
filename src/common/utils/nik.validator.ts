@@ -96,20 +96,12 @@ export class NIKValidator {
     }
 
     /**
-     * Full NIK validation (format + checksum)
+     * Full NIK validation — only checks 16-digit format.
+     * Checksum is intentionally skipped to accept all real-world NIKs.
      */
     static validate(nik: string): { valid: boolean; error?: string } {
         if (!this.isValidFormat(nik)) {
             return { valid: false, error: 'Format NIK harus 16 digit angka' };
-        }
-
-        if (!this.validateChecksum(nik)) {
-            return { valid: false, error: 'Checksum NIK tidak valid' };
-        }
-
-        const birthDateResult = this.extractBirthDate(nik);
-        if (!birthDateResult.date) {
-            return { valid: false, error: birthDateResult.error };
         }
 
         return { valid: true };

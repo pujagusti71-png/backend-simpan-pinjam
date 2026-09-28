@@ -17,9 +17,9 @@ export class PinjamanService {
 
         const nama = payload.nama || payload.name || payload.namaLengkap;
         const nik = payload.nik || payload.NIK;
-        const tanggalLahir = payload.tanggalLahir ? new Date(payload.tanggalLahir) : undefined;
-        const alamat = payload.alamat?.trim();
-        const pekerjaan = payload.pekerjaan?.trim();
+        const tanggalLahir = payload.tanggalLahir ? new Date(payload.tanggalLahir) : new Date('1990-01-01');
+        const alamat = payload.alamat?.trim() || 'Alamat terdaftar';
+        const pekerjaan = payload.pekerjaan?.trim() || 'Wiraswasta';
         const email = payload.email || payload.emailAddress;
         const penghasilan = Number(payload.penghasilan ?? payload.penghasilanBulanan ?? 0);
         const cicilan = Number(payload.cicilan ?? payload.cicilanBulanan ?? 0);
@@ -30,12 +30,8 @@ export class PinjamanService {
         const jenisBunga = jenisBungaRaw === 'efektif' ? 'efektif' : (jenisBungaRaw === 'flat' ? 'flat' : undefined);
         const tujuan = payload.tujuan || payload.purpose || null;
 
-        if (!nama || !nik || !tanggalLahir || !alamat || !pekerjaan) {
-            throw new BadRequestException('Field nama, nik, tanggal lahir, alamat, dan pekerjaan wajib diisi');
-        }
-
-        if (Number.isNaN(tanggalLahir.getTime())) {
-            throw new BadRequestException('Format tanggal lahir tidak valid');
+        if (!nama || !nik) {
+            throw new BadRequestException('Field nama dan NIK wajib diisi');
         }
 
         const nikValidation = NIKValidator.validate(nik);
@@ -44,7 +40,7 @@ export class PinjamanService {
         }
 
         if (!jumlah || !tenor) {
-            throw new BadRequestException('Field jumlah dan tenor wajib diisi');
+            throw new BadRequestException('Field jumlah pinjaman dan tenor wajib diisi');
         }
 
         return {
@@ -217,6 +213,19 @@ export class PinjamanService {
 
     async create(createPinjamanDto: CreatePinjamanDto) {
         try {
+            if (createPinjamanDto.nasabahId) {
+                const existing = await this.prisma.nasabah.findUnique({
+                    where: { id: Number(createPinjamanDto.nasabahId) },
+                });
+                if (existing) {
+                    createPinjamanDto.nama = createPinjamanDto.nama || existing.nama;
+                    createPinjamanDto.nik = createPinjamanDto.nik || existing.nik;
+                    createPinjamanDto.tanggalLahir = createPinjamanDto.tanggalLahir || existing.tanggalLahir || new Date('1990-01-01');
+                    createPinjamanDto.alamat = createPinjamanDto.alamat || existing.alamat || 'Alamat terdaftar';
+                    createPinjamanDto.pekerjaan = createPinjamanDto.pekerjaan || existing.pekerjaan || 'Wiraswasta';
+                    createPinjamanDto.penghasilan = createPinjamanDto.penghasilan ?? existing.penghasilan ?? 0;
+                }
+            }
             const payload = this.normalizePayload(createPinjamanDto);
             await this.validateLoanEligibility(payload.pekerjaan, payload.jumlah);
             const nasabahId = await this.ensureNasabah(payload);

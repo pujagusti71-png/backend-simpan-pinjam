@@ -68,7 +68,7 @@ export class SimpananService {
             take: 1,
         });
 
-        return simpanan.length > 0 ? simpanan[0].saldoAkhir : 0;
+        return (simpanan.length > 0 && simpanan[0]) ? simpanan[0].saldoAkhir : 0;
     }
 
     /**
@@ -94,7 +94,7 @@ export class SimpananService {
                         pekerjaan: createSimpananDto.pekerjaan || 'Lainnya',
                         penghasilan: Number(createSimpananDto.penghasilan ?? 0),
                         riwayatPembayaran: 'Belum ada data',
-                    },
+                    } as any,
                 });
                 nasabahId = createdNasabah.id;
             }
