@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags, ApiBody } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto';
@@ -18,8 +18,8 @@ export class AuthController {
             admin: {
                 summary: 'Login admin',
                 value: {
-                    username: 'admin',
-                    password: 'admin123',
+                    username: 'nama-admin',
+                    password: 'password-admin',
                 },
             },
         },
@@ -44,20 +44,15 @@ export class AuthController {
         description: 'Username atau password salah',
     })
     async login(@Body() loginDto: LoginDto) {
-        console.log('[AuthController] login() called with username:', loginDto.username);
         try {
             return await this.authService.login(loginDto);
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : 'Login gagal';
-            if (error instanceof Error) {
-                console.log('[AuthController] login() error:', error.message);
-            }
             throw new HttpException(message, HttpStatus.UNAUTHORIZED);
         }
     }
 
-    @Public()
     @Post('initialize')
     @ApiOperation({ summary: 'Initialize default admin user (Development only)' })
     @ApiResponse({
@@ -65,6 +60,10 @@ export class AuthController {
         description: 'Admin user initialized',
     })
     async initialize() {
+        if (process.env.NODE_ENV === 'production') {
+            throw new NotFoundException();
+        }
+
         return await this.authService.initializeAdmin();
     }
 }
