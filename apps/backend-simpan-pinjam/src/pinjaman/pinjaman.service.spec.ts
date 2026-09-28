@@ -6,21 +6,24 @@ describe('PinjamanService', () => {
         const prisma = {
             nasabah: {
                 findUnique: jest.fn().mockResolvedValue(null),
-                create: jest.fn().mockResolvedValue({ id: 10, nama: 'Test User', nik: '1234567890123456' }),
+                create: jest.fn().mockResolvedValue({ id: 10, nama: 'Test User', nik: '3204120101900004', alamat: 'Jl. Uji', pekerjaan: 'Wiraswasta' }),
+            },
+            analisisRisikoPekerjaan: {
+                findFirst: jest.fn().mockResolvedValue({ pekerjaan: 'Wiraswasta', kategoriRisiko: 'Rendah' }),
             },
             pinjaman: {
                 create: jest.fn().mockResolvedValue({ id: 1, nasabahId: 10, jumlahPinjaman: 10000000 }),
             },
-            risikoNasabah: {
-                create: jest.fn().mockResolvedValue({ id: 1 }),
-            },
+            analisisRisiko: { recomputeForNasabah: jest.fn().mockResolvedValue(undefined) },
         };
 
-        const service = new PinjamanService(prisma as any);
+        const service = new PinjamanService(prisma as any, prisma.analisisRisiko as any);
 
         const result = await service.create({
             nama: 'Test User',
-            nik: '1234567890123456',
+            nik: '3204120101900004',
+            alamat: 'Jl. Uji',
+            pekerjaan: 'Wiraswasta',
             email: 'test@test.com',
             penghasilan: 5000000,
             cicilan: 1000000,
@@ -39,13 +42,49 @@ describe('PinjamanService', () => {
             nasabahId: 10,
             jumlahPinjaman: 10000000,
             nama: 'Test User',
-            nik: '1234567890123456',
+            nik: '3204120101900004',
         });
+    });
+
+    it('should create a loan for an existing member using only the member id and loan details', async () => {
+        const prisma = {
+            nasabah: {
+                findUnique: jest.fn().mockResolvedValue({
+                    id: 11,
+                    nama: 'Anggota Terdaftar',
+                    nik: '3204120101900004',
+                    tanggalLahir: new Date('1990-01-01'),
+                    alamat: 'Jl. Uji',
+                    pekerjaan: 'PNS',
+                    penghasilan: 5000000,
+                }),
+                update: jest.fn(),
+            },
+            analisisRisikoPekerjaan: {
+                findFirst: jest.fn().mockResolvedValue({ pekerjaan: 'PNS', kategoriRisiko: 'Rendah' }),
+            },
+            pinjaman: {
+                create: jest.fn().mockResolvedValue({ id: 2, nasabahId: 11, jumlahPinjaman: 1000000 }),
+            },
+            analisisRisiko: { recomputeForNasabah: jest.fn().mockResolvedValue(undefined) },
+        };
+        const service = new PinjamanService(prisma as any, prisma.analisisRisiko as any);
+
+        await service.create({ nasabahId: 11, jumlahPinjaman: 1000000, tenor: 12 } as any);
+
+        expect(prisma.pinjaman.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({ nasabahId: 11, jumlahPinjaman: 1000000 }),
+        }));
+        expect(prisma.nasabah.update).toHaveBeenCalledWith(expect.objectContaining({
+            where: { id: 11 },
+            data: expect.objectContaining({ nama: 'Anggota Terdaftar', pekerjaan: 'PNS' }),
+        }));
     });
 
     it('should create a nasabah with the fields used by the frontend', async () => {
         const prisma = {
             nasabah: {
+                findUnique: jest.fn().mockResolvedValue(null),
                 create: jest.fn().mockResolvedValue({ id: 11, nama: 'Uji Nasabah', nik: '1234567890123456' }),
             },
         };
@@ -54,7 +93,7 @@ describe('PinjamanService', () => {
 
         await service.create({
             nama: 'Uji Nasabah',
-            nik: '1234567890123456',
+            nik: '3204120101900004',
             noRek: '123456',
             hp: '081234567890',
             email: 'uji@example.com',
@@ -76,7 +115,7 @@ describe('PinjamanService', () => {
             expect.objectContaining({
                 data: expect.objectContaining({
                     nama: 'Uji Nasabah',
-                    nik: '1234567890123456',
+                    nik: '3204120101900004',
                 }),
             }),
         );

@@ -6,12 +6,11 @@ const BACKEND_URL = (
 ).replace(/\/$/, '')
 
 function getBaseUrl(endpoint: string): string {
-  // Di browser: gunakan relative URL → Next.js rewrite proxy
-  // Di server (SSR/API route): gunakan URL backend langsung
-  if (typeof window !== 'undefined') {
-    return endpoint  // relative, e.g. "/auth/login"
+  if (endpoint.startsWith('http')) {
+    return endpoint
   }
-  return `${BACKEND_URL}${endpoint}`
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  return `${BACKEND_URL}${cleanEndpoint}`
 }
 
 export function getToken(): string | null {

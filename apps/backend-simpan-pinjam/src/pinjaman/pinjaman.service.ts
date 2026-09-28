@@ -17,7 +17,11 @@ export class PinjamanService {
 
         const nama = payload.nama || payload.name || payload.namaLengkap;
         const nik = payload.nik || payload.NIK;
-        const tanggalLahir = payload.tanggalLahir ? new Date(payload.tanggalLahir) : undefined;
+        const tanggalLahir = payload.tanggalLahir
+            ? new Date(payload.tanggalLahir)
+            : nik && NIKValidator.isValidFormat(nik)
+                ? NIKValidator.extractBirthDate(nik).date ?? undefined
+                : undefined;
         const alamat = payload.alamat?.trim();
         const pekerjaan = payload.pekerjaan?.trim();
         const email = payload.email || payload.emailAddress;
@@ -217,6 +221,26 @@ export class PinjamanService {
 
     async create(createPinjamanDto: CreatePinjamanDto) {
         try {
+            if (createPinjamanDto.nasabahId) {
+                const existingNasabah = await this.prisma.nasabah.findUnique({
+                    where: { id: Number(createPinjamanDto.nasabahId) },
+                });
+
+                if (!existingNasabah) {
+                    throw new BadRequestException(`Nasabah dengan ID ${createPinjamanDto.nasabahId} tidak ditemukan`);
+                }
+
+                createPinjamanDto = {
+                    ...createPinjamanDto,
+                    nama: createPinjamanDto.nama || existingNasabah.nama,
+                    nik: createPinjamanDto.nik || existingNasabah.nik,
+                    tanggalLahir: createPinjamanDto.tanggalLahir || existingNasabah.tanggalLahir || undefined,
+                    alamat: createPinjamanDto.alamat || existingNasabah.alamat || undefined,
+                    pekerjaan: createPinjamanDto.pekerjaan || existingNasabah.pekerjaan,
+                    penghasilan: createPinjamanDto.penghasilan ?? existingNasabah.penghasilan,
+                };
+            }
+
             const payload = this.normalizePayload(createPinjamanDto);
             await this.validateLoanEligibility(payload.pekerjaan, payload.jumlah);
             const nasabahId = await this.ensureNasabah(payload);

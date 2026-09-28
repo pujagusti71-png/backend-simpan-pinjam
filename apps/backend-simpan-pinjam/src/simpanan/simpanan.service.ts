@@ -58,8 +58,37 @@ export class SimpananService {
      * Create new savings deposit
      */
     async create(createSimpananDto: CreateSimpananDto) {
+        let nasabahId = createSimpananDto.nasabahId;
+
+        if (!nasabahId && createSimpananDto.nama && createSimpananDto.nik) {
+            const existingNasabah = await this.prisma.nasabah.findUnique({
+                where: { nik: createSimpananDto.nik },
+            });
+
+            if (existingNasabah) {
+                nasabahId = existingNasabah.id;
+            } else {
+                const createdNasabah = await this.prisma.nasabah.create({
+                    data: {
+                        nama: createSimpananDto.nama,
+                        nik: createSimpananDto.nik,
+                        tanggalLahir: createSimpananDto.tanggalLahir ? new Date(createSimpananDto.tanggalLahir) : null,
+                        alamat: createSimpananDto.alamat,
+                        pekerjaan: createSimpananDto.pekerjaan || 'Lainnya',
+                        penghasilan: Number(createSimpananDto.penghasilan ?? 0),
+                        riwayatPembayaran: 'Belum ada data',
+                    } as any,
+                });
+                nasabahId = createdNasabah.id;
+            }
+        }
+
+        if (!nasabahId) {
+            throw new BadRequestException('Pilih nasabah atau lengkapi nama dan NIK nasabah baru');
+        }
+
         const nasabah = await this.prisma.nasabah.findUnique({
-            where: { id: createSimpananDto.nasabahId },
+            where: { id: nasabahId },
             select: {
                 id: true,
                 nama: true,
@@ -74,10 +103,10 @@ export class SimpananService {
         });
 
         if (!nasabah) {
-            throw new NotFoundException(`Nasabah dengan ID ${createSimpananDto.nasabahId} tidak ditemukan`);
+            throw new NotFoundException(`Nasabah dengan ID ${nasabahId} tidak ditemukan`);
         }
 
-        const currentBalance = await this.getCurrentBalance(createSimpananDto.nasabahId);
+        const currentBalance = await this.getCurrentBalance(nasabahId);
         const saldoSetelahSetoran = currentBalance + createSimpananDto.jumlahSetoran;
         const bungaRate = this.getBungaRateBySaldo(saldoSetelahSetoran);
         const jenisInterest = (createSimpananDto.jenisInterest || 'flat') as 'flat' | 'efektif';
@@ -88,7 +117,7 @@ export class SimpananService {
 
         const simpananRecord = await this.prisma.simpanan.create({
             data: {
-                nasabahId: createSimpananDto.nasabahId,
+                nasabahId,
                 jumlahSetoran: createSimpananDto.jumlahSetoran,
                 bungaSimpanan: bungaRate,
                 jenisInterest,

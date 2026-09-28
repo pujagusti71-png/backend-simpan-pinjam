@@ -65,4 +65,35 @@ describe('SimpananService', () => {
             }),
         );
     });
+
+    it('should create a savings account for a new member submitted by the frontend', async () => {
+        const member = { id: 12, nama: 'Uji Simpanan', nik: '3204120101900004', pekerjaan: 'Wiraswasta', penghasilan: 5000000 };
+        const prisma = {
+            nasabah: {
+                findUnique: jest.fn()
+                    .mockResolvedValueOnce(null)
+                    .mockResolvedValueOnce(member),
+                create: jest.fn().mockResolvedValue(member),
+            },
+            simpanan: {
+                findMany: jest.fn().mockResolvedValue([]),
+                create: jest.fn().mockResolvedValue({ id: 13, nasabahId: 12, jumlahSetoran: 500000, saldoAkhir: 500000 }),
+            },
+        };
+
+        const service = new SimpananService(prisma as any);
+        await service.create({
+            nama: member.nama,
+            nik: member.nik,
+            alamat: 'Jl. Uji',
+            pekerjaan: member.pekerjaan,
+            penghasilan: member.penghasilan,
+            jumlahSetoran: 500000,
+        } as any);
+
+        expect(prisma.nasabah.create).toHaveBeenCalled();
+        expect(prisma.simpanan.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({ nasabahId: 12, jumlahSetoran: 500000 }),
+        }));
+    });
 });
