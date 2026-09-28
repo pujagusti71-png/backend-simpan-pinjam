@@ -1,8 +1,10 @@
-// Untuk server-side rendering (SSR), gunakan URL backend langsung.
-// Untuk client-side (browser), gunakan relative URL agar Next.js rewrite proxy yang handle.
-const BACKEND_URL = (
+// Browser requests use the backend origin because Next.js pages share API paths.
+const rawBackendUrl = (
   process.env.NEXT_PUBLIC_API_URL ||
   'https://simpan-pinjam-backend-production.up.railway.app'
+).trim()
+const BACKEND_URL = (
+  rawBackendUrl.startsWith('http') ? rawBackendUrl : `https://${rawBackendUrl}`
 ).replace(/\/$/, '')
 
 function getBaseUrl(endpoint: string): string {
