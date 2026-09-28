@@ -78,7 +78,21 @@ type SubmitState = {
   error: string | null
 }
 
-const pekerjaanOptions = ['PNS', 'Wiraswasta', 'Karyawan Swasta', 'Freelance', 'Petani', 'Buruh', 'Lainnya']
+const pekerjaanOptions = [
+  'PNS',
+  'TNI/Polri',
+  'Pegawai BUMN',
+  'Karyawan Swasta',
+  'Wiraswasta',
+  'Pedagang',
+  'Petani',
+  'Guru',
+  'Tenaga Medis',
+  'Buruh Pabrik',
+  'Driver Ojol',
+  'Pensiunan',
+  'Profesional',
+]
 const riwayatOptions: Nasabah['riwayat'][] = ['Lancar', 'Telat']
 const currencyFormatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',

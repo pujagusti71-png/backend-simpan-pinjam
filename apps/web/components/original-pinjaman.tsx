@@ -303,28 +303,76 @@ export default function OriginalPinjaman({
                                     ["namaIbu", "Nama Ibu Kandung"],
                                     ["tanggalLahirIbu", "Tanggal Lahir Ibu"],
                                     ["alamatIbu", "Alamat Ibu Kandung"],
+                                    ["pekerjaan", "Pekerjaan"],
                                     ["penghasilan", "Penghasilan per Bulan"],
                                     ["cicilan", "Cicilan per Bulan"],
                                     ["jumlahLembaga", "Hutang di Berapa Tempat"],
                                     ["totalHutangLain", "Total Hutang di Tempat Lain"],
                                     ["jumlahPinjaman", "Jumlah Pinjaman"],
-                                    ["bunga", "Bunga per Tahun %"],
+                                    ["bunga", "Bunga per Tahun (Otomatis)"],
                                     ["tujuan", "Tujuan Pinjaman"],
                                 ] as Array<[keyof LoanForm, string]>
-                            ).map(([key, label]) => (
-                                <label
-                                    key={key}
-                                    className="flex flex-col gap-1 text-xs font-semibold text-slate-500 uppercase"
-                                >
-                                    {label}
-                                    <input
-                                        required={["nama", "jumlahPinjaman"].includes(key)}
-                                        value={form[key]}
-                                        onChange={(event) => onFormChange(key, event.target.value)}
-                                        className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case"
-                                    />
-                                </label>
-                            ))}
+                            ).map(([key, label]) => {
+                                if (key === "pekerjaan") {
+                                    return (
+                                        <label
+                                            key={key}
+                                            className="flex flex-col gap-1 text-xs font-semibold text-slate-500 uppercase"
+                                        >
+                                            {label}
+                                            <select
+                                                value={form[key] || "Wiraswasta"}
+                                                onChange={(event) => onFormChange(key, event.target.value)}
+                                                className="rounded-md border border-slate-300 bg-white p-2.5 text-sm font-normal normal-case"
+                                            >
+                                                <option value="PNS">PNS / ASN</option>
+                                                <option value="TNI/Polri">TNI / Polri</option>
+                                                <option value="Pegawai BUMN">Pegawai BUMN</option>
+                                                <option value="Karyawan Swasta">Karyawan Swasta</option>
+                                                <option value="Wiraswasta">Wiraswasta / Pengusaha</option>
+                                                <option value="Pedagang">Pedagang / UMKM</option>
+                                                <option value="Petani">Petani / Peternak</option>
+                                                <option value="Guru">Guru / Dosen</option>
+                                                <option value="Tenaga Medis">Tenaga Medis / Perawat</option>
+                                                <option value="Buruh Pabrik">Buruh / Karyawan Pabrik</option>
+                                                <option value="Driver Ojol">Driver Ojek Online / Sopir</option>
+                                                <option value="Pensiunan">Pensiunan</option>
+                                                <option value="Profesional">Profesional</option>
+                                            </select>
+                                        </label>
+                                    )
+                                }
+                                if (key === "bunga") {
+                                    return (
+                                        <label
+                                            key={key}
+                                            className="flex flex-col gap-1 text-xs font-semibold text-slate-500 uppercase"
+                                        >
+                                            {label}
+                                            <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-100 p-2.5 text-sm font-semibold text-slate-800">
+                                                <span>{form[key] ? `${form[key]}% per tahun` : "12% per tahun"}</span>
+                                                <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
+                                                    Otomatis Sistem
+                                                </span>
+                                            </div>
+                                        </label>
+                                    )
+                                }
+                                return (
+                                    <label
+                                        key={key}
+                                        className="flex flex-col gap-1 text-xs font-semibold text-slate-500 uppercase"
+                                    >
+                                        {label}
+                                        <input
+                                            required={["nama", "jumlahPinjaman"].includes(key)}
+                                            value={form[key]}
+                                            onChange={(event) => onFormChange(key, event.target.value)}
+                                            className="rounded-md border border-slate-300 p-2.5 text-sm font-normal normal-case"
+                                        />
+                                    </label>
+                                )
+                            })}
                         </div>
                         <div className="mt-6 flex justify-end gap-3">
                             <button

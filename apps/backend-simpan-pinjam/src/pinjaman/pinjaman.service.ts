@@ -109,6 +109,20 @@ export class PinjamanService {
                 pedagang: 'Wirausaha/Pengusaha/UMKM/Pedagang',
                 petani: 'Petani/Pekebun/Peternak',
                 guru: 'Guru/Dosen',
+                buruh: 'Buruh Pabrik',
+                sopir: 'Sopir',
+                'driver ojol': 'Driver Ojol',
+                ojol: 'Driver Ojol',
+                bumn: 'Pegawai BUMN',
+                'pegawai bumn': 'Pegawai BUMN',
+                tni: 'TNI/Polri',
+                polri: 'TNI/Polri',
+                'tni/polri': 'TNI/Polri',
+                pns: 'PNS',
+                asn: 'PNS',
+                dokter: 'Tenaga Medis',
+                perawat: 'Tenaga Medis',
+                'tenaga medis': 'Tenaga Medis',
             };
             const lookupPekerjaan = occupationAliases[normalizedPekerjaan.toLowerCase()] || normalizedPekerjaan;
             const found = fallbackMasterData.find((item) => item.pekerjaan.toLowerCase() === lookupPekerjaan.toLowerCase());

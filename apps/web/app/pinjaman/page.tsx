@@ -141,7 +141,7 @@ export default function PinjamanPage() {
     catatan: '',
     jumlahPinjaman: '',
     tenor: '12',
-    bunga: '',
+    bunga: '12',
     tujuan: '',
   })
   const [pengajuanList, setPengajuanList] = useState<NasabahDetail[]>([])
@@ -271,13 +271,13 @@ export default function PinjamanPage() {
       cicilan,
       jumlah: jumlahPinjaman,
       tenor: Number(pengajuanForm.tenor || 0),
-      bunga: Number(pengajuanForm.bunga || 0),
+      bunga: Number(pengajuanForm.bunga || 12),
       tujuan: pengajuanForm.tujuan,
       risiko: calculatedRisk,
       rekomendasi: recommendation,
       jumlahPinjaman: jumlahPinjaman,
       tenorBulan: Number(pengajuanForm.tenor || 0),
-      sukuBunga: Number(pengajuanForm.bunga || 0),
+      sukuBunga: Number(pengajuanForm.bunga || 12),
       jenisBunga: 'efektif',
     }
 
@@ -347,7 +347,7 @@ export default function PinjamanPage() {
         catatan: '',
         jumlahPinjaman: '',
         tenor: '12',
-        bunga: '',
+        bunga: '12',
         tujuan: '',
       })
       setIsPengajuanOpen(false)

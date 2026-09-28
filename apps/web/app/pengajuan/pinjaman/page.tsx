@@ -456,12 +456,18 @@ export default function PengajuanPinjamanPage() {
                                             className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                                         >
                                             <option value="PNS">PNS / ASN</option>
+                                            <option value="TNI/Polri">TNI / Polri</option>
+                                            <option value="Pegawai BUMN">Pegawai BUMN</option>
                                             <option value="Karyawan Swasta">Karyawan Swasta</option>
                                             <option value="Wiraswasta">Wiraswasta / Pengusaha</option>
-                                            <option value="Pedagang">Pedagang</option>
+                                            <option value="Pedagang">Pedagang / UMKM</option>
                                             <option value="Petani">Petani / Peternak</option>
                                             <option value="Guru">Guru / Dosen</option>
-                                            <option value="Lainnya">Lainnya</option>
+                                            <option value="Tenaga Medis">Tenaga Medis / Perawat</option>
+                                            <option value="Buruh Pabrik">Buruh / Karyawan Pabrik</option>
+                                            <option value="Driver Ojol">Driver Ojek Online / Sopir</option>
+                                            <option value="Pensiunan">Pensiunan</option>
+                                            <option value="Profesional">Profesional</option>
                                         </select>
                                     </div>
 
@@ -576,16 +582,14 @@ export default function PengajuanPinjamanPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700">
-                                            Suku Bunga (% per Bulan)
+                                            Suku Bunga Pinjaman
                                         </label>
-                                        <input
-                                            type="number"
-                                            step="0.1"
-                                            min="0"
-                                            value={form.sukuBunga}
-                                            onChange={(e) => setForm({ ...form, sukuBunga: e.target.value })}
-                                            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                                        />
+                                        <div className="mt-1.5 flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm">
+                                            <span>{form.sukuBunga}% per Bulan</span>
+                                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                                                Bunga Otomatis Sistem
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <div>
