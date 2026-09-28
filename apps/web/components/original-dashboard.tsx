@@ -9,13 +9,16 @@ type DashboardMetrics = {
     totalSimpanan: number
     ldr: number
     nasabahAktif: number
+    totalAngsuran: number
+    pengajuanMenunggu: number
+    pinjamanLunas: number
 }
 
-const fmt = (v: number) => {
-    if (v >= 1_000_000_000) return `Rp. ${(v / 1_000_000_000).toFixed(0)} M`
-    if (v >= 1_000_000) return `Rp. ${(v / 1_000_000).toFixed(3).replace('.', ',')}`
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v)
-}
+const fmt = (value: number) => new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0,
+}).format(value || 0)
 
 export default function OriginalDashboard({
     metrics,
@@ -29,11 +32,11 @@ export default function OriginalDashboard({
 
     const statCards = [
         { label: 'DATA ANGGOTA', value: metrics.nasabahAktif.toString(), borderColor: '#3b82f6', href: '/nasabah' },
-        { label: 'DATA PINJAMAN', value: fmt(metrics.totalPinjaman), borderColor: '#22c55e', href: '/pinjaman' },
-        { label: 'DATA ANGSURAN', value: fmt(metrics.totalPinjaman * 0.75), borderColor: '#3b82f6', href: '/pinjaman/pembayaran' },
-        { label: 'DATA TABUNGAN', value: fmt(metrics.totalSimpanan), borderColor: '#f59e0b', href: '/simpanan' },
-        { label: 'DATA DENDA', value: fmt(metrics.totalPinjaman * 0.03), borderColor: '#ef4444', href: '/laporan' },
-        { label: 'DATA PENGAJUAN', value: fmt(metrics.totalPinjaman * 0.35), borderColor: '#6b7280', href: '/pinjaman' },
+        { label: 'PINJAMAN AKTIF', value: fmt(metrics.totalPinjaman), borderColor: '#22c55e', href: '/pinjaman' },
+        { label: 'ANGSURAN DITERIMA', value: fmt(metrics.totalAngsuran), borderColor: '#3b82f6', href: '/pinjaman/pembayaran' },
+        { label: 'SALDO SIMPANAN', value: fmt(metrics.totalSimpanan), borderColor: '#f59e0b', href: '/simpanan' },
+        { label: 'PENGAJUAN MENUNGGU', value: metrics.pengajuanMenunggu.toLocaleString('id-ID'), borderColor: '#ef4444', href: '/pinjaman' },
+        { label: 'PINJAMAN LUNAS', value: metrics.pinjamanLunas.toLocaleString('id-ID'), borderColor: '#6b7280', href: '/pinjaman' },
     ]
 
     return (

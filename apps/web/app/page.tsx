@@ -7,14 +7,7 @@ import { Wallet, PiggyBank, PieChart as PieIcon, Users, TrendingUp, ChevronDown 
 import { api } from '@/lib/api'
 import OriginalDashboard from '@/components/original-dashboard'
 
-const defaultAreaData = [
-  { month: "Des '24", value: 1.8 },
-  { month: "Jan '25", value: 2.2 },
-  { month: "Feb '25", value: 2.5 },
-  { month: "Mar '25", value: 2.8 },
-  { month: "Apr '25", value: 3.1 },
-  { month: "Mei '25", value: 3.4 },
-]
+const defaultAreaData: Array<{ month: string; value: number }> = []
 
 const defaultPieData = [
   { name: 'Rendah', value: 52, color: '#0d9488' },
@@ -30,6 +23,9 @@ export default function Page() {
     totalSimpanan: 0,
     ldr: 0,
     nasabahAktif: 0,
+    totalAngsuran: 0,
+    pengajuanMenunggu: 0,
+    pinjamanLunas: 0,
   })
   const [areaData, setAreaData] = useState(defaultAreaData)
   const [pieData, setPieData] = useState(defaultPieData)
@@ -37,20 +33,19 @@ export default function Page() {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const [nasabah, pinjaman, simpanan, risk] = await Promise.all([
-          api.getNasabah().catch(() => []),
-          api.getPinjaman().catch(() => []),
-          api.getSimpanan().catch(() => []),
+        const [summary, chart, pembayaran, risk] = await Promise.all([
+          api.getDashboardSummary().catch(() => null),
+          api.getDashboardChart().catch(() => []),
+          api.getPembayaran().catch(() => []),
           api.getAnalisisRisiko().catch(() => []),
         ])
 
-        const nasabahList = Array.isArray(nasabah) ? nasabah : []
-        const pinjamanList = Array.isArray(pinjaman) ? pinjaman : []
-        const simpananList = Array.isArray(simpanan) ? simpanan : []
+        const paymentList = Array.isArray(pembayaran) ? pembayaran : []
         const riskList = Array.isArray(risk) ? risk : []
 
-        const totalPinjaman = pinjamanList.reduce((sum: number, item: any) => sum + Number(item?.jumlahPinjaman ?? item?.jumlah ?? 0), 0)
-        const totalSimpanan = simpananList.reduce((sum: number, item: any) => sum + Number(item?.saldoAkhir ?? item?.saldo ?? 0), 0)
+        const totalPinjaman = Number(summary?.pinjaman?.nilaiTotalAktif ?? 0)
+        const totalSimpanan = Number(summary?.simpanan?.totalSaldo ?? 0)
+        const totalAngsuran = paymentList.reduce((sum: number, item: any) => sum + Number(item?.jumlahBayar ?? 0), 0)
         const ldr = totalSimpanan > 0 ? (totalPinjaman / totalSimpanan) * 100 : 0
 
         const riskCounts = {
@@ -71,27 +66,27 @@ export default function Page() {
           { name: 'Tinggi', value: riskList.length > 0 ? Math.max(5, 100 - Math.max(10, Math.round((riskCounts.Rendah / Math.max(riskList.length, 1)) * 100)) - Math.max(10, Math.round((riskCounts.Sedang / Math.max(riskList.length, 1)) * 100))) : 15, color: '#e0f2fe' },
         ]
 
-        const multiplier = totalSimpanan > 0 ? totalSimpanan / 1_000_000 : 1
-        const nextArea = [
-          { month: "Des '24", value: Number((multiplier * 0.55).toFixed(1)) },
-          { month: "Jan '25", value: Number((multiplier * 0.68).toFixed(1)) },
-          { month: "Feb '25", value: Number((multiplier * 0.82).toFixed(1)) },
-          { month: "Mar '25", value: Number((multiplier * 0.96).toFixed(1)) },
-          { month: "Apr '25", value: Number((multiplier * 1.08).toFixed(1)) },
-          { month: "Mei '25", value: Number((multiplier * 1.2).toFixed(1)) },
-        ]
+        const nextArea = Array.isArray(chart)
+          ? chart.map((item: any) => ({
+            month: item.bulan,
+            value: (Number(item.simpanan ?? 0) + Number(item.pinjaman ?? 0)) / 1_000_000,
+          }))
+          : []
 
         setMetrics({
           totalPinjaman,
           totalSimpanan,
           ldr: Number(ldr.toFixed(1)),
-          nasabahAktif: nasabahList.length,
+          nasabahAktif: Number(summary?.nasabah?.total ?? 0),
+          totalAngsuran,
+          pengajuanMenunggu: Number(summary?.pinjaman?.pending ?? 0),
+          pinjamanLunas: Number(summary?.pinjaman?.lunas ?? 0),
         })
         setAreaData(nextArea)
         setPieData(nextPie)
       } catch (error) {
         console.error('Gagal memuat dashboard utama', error)
-        setMetrics({ totalPinjaman: 0, totalSimpanan: 0, ldr: 0, nasabahAktif: 0 })
+        setMetrics({ totalPinjaman: 0, totalSimpanan: 0, ldr: 0, nasabahAktif: 0, totalAngsuran: 0, pengajuanMenunggu: 0, pinjamanLunas: 0 })
         setAreaData(defaultAreaData)
         setPieData(defaultPieData)
       }

@@ -104,9 +104,18 @@ export class PinjamanService {
                 { pekerjaan: 'Pensiunan', skorRisiko: 30, kategoriRisiko: 'Rendah' },
                 { pekerjaan: 'Mahasiswa', skorRisiko: 90, kategoriRisiko: 'Sangat Tinggi' },
                 { pekerjaan: 'Belum Bekerja', skorRisiko: 95, kategoriRisiko: 'Sangat Tinggi' },
+                { pekerjaan: 'Lainnya', skorRisiko: 65, kategoriRisiko: 'Tinggi' },
             ];
 
-            const found = fallbackMasterData.find((item) => item.pekerjaan.toLowerCase() === normalizedPekerjaan.toLowerCase());
+            const occupationAliases: Record<string, string> = {
+                'karyawan swasta': 'Karyawan Kontrak',
+                wiraswasta: 'Wirausaha/Pengusaha/UMKM/Pedagang',
+                pedagang: 'Wirausaha/Pengusaha/UMKM/Pedagang',
+                petani: 'Petani/Pekebun/Peternak',
+                guru: 'Guru/Dosen',
+            };
+            const lookupPekerjaan = occupationAliases[normalizedPekerjaan.toLowerCase()] || normalizedPekerjaan;
+            const found = fallbackMasterData.find((item) => item.pekerjaan.toLowerCase() === lookupPekerjaan.toLowerCase());
 
             if (found) {
                 analisis = await this.prisma.analisisRisikoPekerjaan.upsert({

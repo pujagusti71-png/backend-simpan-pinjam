@@ -81,6 +81,42 @@ describe('PinjamanService', () => {
         }));
     });
 
+    it('should accept the default Wiraswasta occupation when no risk master data exists', async () => {
+        const prisma = {
+            nasabah: {
+                findUnique: jest.fn().mockResolvedValue(null),
+                create: jest.fn().mockResolvedValue({ id: 12, nama: 'Uji', nik: '3204120101900004' }),
+            },
+            analisisRisikoPekerjaan: {
+                findFirst: jest.fn().mockResolvedValue(null),
+                upsert: jest.fn().mockResolvedValue({ pekerjaan: 'Wirausaha/Pengusaha/UMKM/Pedagang', kategoriRisiko: 'Sedang' }),
+            },
+            pinjaman: {
+                create: jest.fn().mockResolvedValue({ id: 3, nasabahId: 12, jumlahPinjaman: 10000 }),
+            },
+            analisisRisiko: { recomputeForNasabah: jest.fn().mockResolvedValue(undefined) },
+        };
+        const service = new PinjamanService(prisma as any, prisma.analisisRisiko as any);
+
+        await service.create({
+            nama: 'Uji',
+            nik: '3204120101900004',
+            alamat: 'Alamat uji',
+            pekerjaan: 'Wiraswasta',
+            penghasilan: 6000000,
+            jumlahPinjaman: 10000,
+            tenor: 12,
+            sukuBunga: 1.2,
+            jenisBunga: 'flat',
+        } as any);
+
+        expect(prisma.analisisRisikoPekerjaan.upsert).toHaveBeenCalledWith(expect.objectContaining({
+            where: { pekerjaan: 'Wirausaha/Pengusaha/UMKM/Pedagang' },
+            create: expect.objectContaining({ kategoriRisiko: 'Sedang' }),
+        }));
+        expect(prisma.pinjaman.create).toHaveBeenCalled();
+    });
+
     it('should create a nasabah with the fields used by the frontend', async () => {
         const prisma = {
             nasabah: {

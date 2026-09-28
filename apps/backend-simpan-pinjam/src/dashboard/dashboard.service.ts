@@ -97,7 +97,7 @@ export class DashboardService {
             totalPinjamanPending,
             totalPinjamanLunas,
             totalPinjamanRejected,
-            totalSimpanan,
+            simpananSnapshots,
             pembayaranTelat,
             risikoNasabah,
         ] = await Promise.all([
@@ -106,7 +106,10 @@ export class DashboardService {
             this.prisma.pinjaman.count({ where: { status: 'pending' } }),
             this.prisma.pinjaman.count({ where: { status: 'lunas' } }),
             this.prisma.pinjaman.count({ where: { status: 'rejected' } }),
-            this.prisma.simpanan.aggregate({ _sum: { saldoAkhir: true } }),
+            this.prisma.simpanan.findMany({
+                select: { nasabahId: true, saldoAkhir: true },
+                orderBy: { createdAt: 'desc' },
+            }),
             // Nasabah dengan minimal 1 pembayaran telat di pinjaman aktif
             this.prisma.pembayaran.findMany({
                 where: { statusBayar: 'telat' },
@@ -122,6 +125,14 @@ export class DashboardService {
 
         // Hitung nasabah unik yang telat
         const nasabahTelatIds = new Set(pembayaranTelat.map((p) => p.pinjaman.nasabahId));
+
+        const saldoTerbaruPerNasabah = new Map<number, number>();
+        simpananSnapshots.forEach((snapshot) => {
+            if (!saldoTerbaruPerNasabah.has(snapshot.nasabahId)) {
+                saldoTerbaruPerNasabah.set(snapshot.nasabahId, Number(snapshot.saldoAkhir ?? 0));
+            }
+        });
+        const totalSaldoSimpanan = [...saldoTerbaruPerNasabah.values()].reduce((sum, saldo) => sum + saldo, 0);
 
         // Total nilai pinjaman aktif
         const nilaiPinjamanAktif = await this.prisma.pinjaman.aggregate({
@@ -163,7 +174,7 @@ export class DashboardService {
                 nilaiTotalAktif: Number(nilaiPinjamanAktif._sum.jumlahPinjaman ?? 0),
             },
             simpanan: {
-                totalSaldo: Number(totalSimpanan._sum.saldoAkhir ?? 0),
+                totalSaldo: totalSaldoSimpanan,
             },
             keputusan: {
                 approve: rekMap['approve'],

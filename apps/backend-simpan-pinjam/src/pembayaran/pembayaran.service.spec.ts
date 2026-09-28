@@ -43,7 +43,9 @@ describe('PembayaranService', () => {
       },
     };
 
-    const service = new PembayaranService(prisma as any);
+    const service = new PembayaranService(prisma as any, {
+      recomputeForNasabah: jest.fn().mockResolvedValue(undefined),
+    } as any);
 
     const result = await service.create({
       pinjamanId: 1,
