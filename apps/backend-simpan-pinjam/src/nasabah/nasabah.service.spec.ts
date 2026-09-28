@@ -5,7 +5,11 @@ describe('NasabahService', () => {
     it('should turn a duplicate NIK error into a friendly bad request', async () => {
         const prisma = {
             nasabah: {
+                findUnique: jest.fn().mockResolvedValue(null),
                 create: jest.fn().mockRejectedValue({ code: 'P2002', meta: { target: ['nik'] } }),
+            },
+            analisisRisikoPekerjaan: {
+                findFirst: jest.fn().mockResolvedValue(null),
             },
         };
 

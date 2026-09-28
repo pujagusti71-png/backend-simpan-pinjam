@@ -29,27 +29,46 @@ export default function LdrLikuiditasPage() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [nasabahRes, pinjamanRes, simpananRes, pekerjaanRes] = await Promise.all([
+                const [nasabahRes, pinjamanRes, simpananRes, pekerjaanRes, summaryRes] = await Promise.all([
                     apiFetch('/nasabah').catch(() => []),
                     apiFetch('/pinjaman').catch(() => []),
                     apiFetch('/simpanan').catch(() => []),
                     apiFetch('/analisis-pekerjaan').catch(() => ({ data: [] })),
+                    apiFetch('/dashboard/summary').catch(() => null),
                 ])
 
                 const nasabah = Array.isArray(nasabahRes) ? nasabahRes : []
                 const pinjaman = Array.isArray(pinjamanRes) ? pinjamanRes : []
                 const simpanan = Array.isArray(simpananRes) ? simpananRes : []
-                const jobs = Array.isArray(pekerjaanRes?.data) ? pekerjaanRes.data : []
+                const jobs = Array.isArray(pekerjaanRes?.data)
+                    ? pekerjaanRes.data
+                    : Array.isArray(pekerjaanRes)
+                        ? pekerjaanRes
+                        : []
 
-                const totalPinjaman = pinjaman.reduce((sum: number, item: any) => {
-                    const nominal = Number(item?.jumlahPinjaman ?? item?.jumlah ?? 0)
-                    return sum + nominal
-                }, 0)
+                // Saldo simpanan terbaru per nasabah (bukan jumlah seluruh transaksi snapshot)
+                let totalSimpanan = 0
+                if (summaryRes?.simpanan?.totalSaldo !== undefined) {
+                    totalSimpanan = Number(summaryRes.simpanan.totalSaldo)
+                } else {
+                    const saldoPerNasabah = new Map<number, number>()
+                    simpanan.forEach((item: any) => {
+                        if (item.nasabahId && !saldoPerNasabah.has(item.nasabahId)) {
+                            saldoPerNasabah.set(item.nasabahId, Number(item.saldoAkhir ?? 0))
+                        }
+                    })
+                    totalSimpanan = [...saldoPerNasabah.values()].reduce((sum, v) => sum + v, 0)
+                }
 
-                const totalSimpanan = simpanan.reduce((sum: number, item: any) => {
-                    const nominal = Number(item?.saldoAkhir ?? item?.saldo ?? 0)
-                    return sum + nominal
-                }, 0)
+                // Total nilai pinjaman aktif yang benar
+                let totalPinjaman = 0
+                if (summaryRes?.pinjaman?.nilaiTotalAktif !== undefined) {
+                    totalPinjaman = Number(summaryRes.pinjaman.nilaiTotalAktif)
+                } else {
+                    totalPinjaman = pinjaman
+                        .filter((p: any) => p.status === 'active')
+                        .reduce((sum: number, item: any) => sum + Number(item.jumlahPinjaman ?? item.jumlah ?? 0), 0)
+                }
 
                 const ldr = totalSimpanan > 0 ? (totalPinjaman / totalSimpanan) * 100 : 0
                 const danaBeredar = Math.max(0, totalSimpanan - totalPinjaman)
@@ -61,19 +80,15 @@ export default function LdrLikuiditasPage() {
                     return riwayat.includes('telat') || hasTunggakan || risky
                 }).length
 
-                const derivedRiskJobs = jobs.length > 0
-                    ? jobs
-                        .slice(0, 5)
-                        .map((item: any) => ({
-                            label: item.pekerjaan || 'Pekerjaan',
-                            value: Math.max(0, Number(item?.persentaseKeterlambatan ?? 0)),
-                        }))
-                    : [
-                        { label: 'Freelance', value: 38 },
-                        { label: 'Petani', value: 29 },
-                        { label: 'Wirausaha', value: 22 },
-                        { label: 'Karyawan Swasta', value: 18 },
-                    ]
+                const derivedRiskJobs = jobs.map((item: any) => ({
+                    label: item.pekerjaan || 'Pekerjaan',
+                    value: Math.max(0, Number(item?.persentaseKeterlambatan ?? 0)),
+                }))
+
+                const totalNasabah = summaryRes?.nasabah?.total ?? nasabah.length
+                const avgKeterlambatan = derivedRiskJobs.length > 0
+                    ? derivedRiskJobs.reduce((sum: number, item: { value: number }) => sum + item.value, 0) / derivedRiskJobs.length
+                    : 0
 
                 setSummary({
                     totalSimpanan,
@@ -81,8 +96,8 @@ export default function LdrLikuiditasPage() {
                     ldr: Number(ldr.toFixed(1)),
                     danaBeredar,
                     nasabahTidakAktif: inactive,
-                    totalNasabah: nasabah.length,
-                    persentaseKeterlambatan: derivedRiskJobs.reduce((sum: number, item: { value: number }) => sum + item.value, 0) / Math.max(derivedRiskJobs.length, 1),
+                    totalNasabah,
+                    persentaseKeterlambatan: avgKeterlambatan,
                 })
                 setRiskJobs(derivedRiskJobs)
             } catch (error) {

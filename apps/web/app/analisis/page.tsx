@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { ShieldCheck, AlertTriangle, AlertOctagon, TrendingUp, BarChart3, Search } from 'lucide-react'
-import { api } from '@/lib/api'
+import { ShieldCheck, AlertTriangle, AlertOctagon, Search } from 'lucide-react'
+import { api, apiFetch } from '@/lib/api'
 
 type AnalisisRow = {
   nama: string
@@ -12,39 +12,74 @@ type AnalisisRow = {
   risiko: string
 }
 
-const defaultAnalisisData: AnalisisRow[] = [
-  { nama: 'Samuel Santoso', penghasilan: 7500000, cicilan: 1350000, rasio: 18, risiko: 'Rendah' },
-  { nama: 'Dewi Permata', penghasilan: 6000000, cicilan: 1500000, rasio: 25, risiko: 'Rendah' },
-  { nama: 'Ahmad Fauzi', penghasilan: 8500000, cicilan: 2975000, rasio: 35, risiko: 'Sedang' },
-  { nama: 'Budi Santoso', penghasilan: 4200000, cicilan: 2310000, rasio: 55, risiko: 'Tinggi' },
-  { nama: 'Siti Aminah', penghasilan: 5000000, cicilan: 1200000, rasio: 24, risiko: 'Rendah' },
-]
-
 export default function AnalisisPage() {
-  const [rows, setRows] = useState<AnalisisRow[]>(defaultAnalisisData)
+  const [rows, setRows] = useState<AnalisisRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    api.getAnalisisRisiko()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setRows(data.map((item: any) => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        // Ambil data laporan komprehensif dari backend
+        const [laporanRes, risikoRes] = await Promise.all([
+          apiFetch('/dashboard/laporan').catch(() => null),
+          api.getAnalisisRisiko().catch(() => []),
+        ])
+
+        let mappedRows: AnalisisRow[] = []
+
+        if (Array.isArray(laporanRes?.data) && laporanRes.data.length > 0) {
+          mappedRows = laporanRes.data.map((item: any) => {
+            const penghasilan = Number(item.penghasilan || 0)
+            const cicilan = Number(item.totalCicilanBulanan || 0)
+            const rasio = Number(item.rasioGajiCicilan || (penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0))
+            const rawRisiko = item.kategoriRisiko || 'Rendah'
+            return {
+              nama: item.nama || 'Nasabah',
+              penghasilan,
+              cicilan,
+              rasio: Math.round(rasio * 10) / 10,
+              risiko: rawRisiko === 'Belum dihitung' ? 'Rendah' : rawRisiko,
+            }
+          })
+        } else if (Array.isArray(risikoRes) && risikoRes.length > 0) {
+          mappedRows = risikoRes.map((item: any) => {
             const penghasilan = Number(item.penghasilan || 0)
             const cicilan = Number(item.cicilan || item.cicilanBulanan || 0)
-            const rasio = penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0
+            const rasio = Number(item.rasioCicilan || (penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0))
             return {
               nama: item.namaNasabah || item.nama || 'Nasabah',
               penghasilan,
               cicilan,
-              rasio,
-              risiko: item.status || item.risiko || 'Review',
+              rasio: Math.round(rasio * 10) / 10,
+              risiko: item.kategoriRisiko || item.status || 'Rendah',
             }
-          }))
+          })
+        } else {
+          // Fallback ke daftar nasabah riil jika analisis risiko belum ada
+          const nasabahRes = await api.getNasabah().catch(() => [])
+          if (Array.isArray(nasabahRes) && nasabahRes.length > 0) {
+            mappedRows = nasabahRes.map((item: any) => ({
+              nama: item.nama || 'Nasabah',
+              penghasilan: Number(item.penghasilan || 0),
+              cicilan: 0,
+              rasio: 0,
+              risiko: 'Rendah',
+            }))
+          }
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
+
+        setRows(mappedRows)
+      } catch (err) {
+        console.error('Gagal mengambil data analisis risiko:', err)
+        setRows([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void fetchData()
   }, [])
 
   const formatCurrency = (value: number) =>
@@ -57,10 +92,10 @@ export default function AnalisisPage() {
   const low = rows.filter((row) => row.risiko.toLowerCase().includes('rendah') || row.risiko.toLowerCase().includes('layak')).length
   const medium = rows.filter((row) => row.risiko.toLowerCase().includes('sedang') || row.risiko.toLowerCase().includes('review')).length
   const high = Math.max(0, rows.length - low - medium)
-  const total = Math.max(rows.length, 1)
-  const lowPercent = Math.round((low / total) * 100)
-  const mediumPercent = Math.round((medium / total) * 100)
-  const highPercent = Math.max(0, 100 - lowPercent - mediumPercent)
+  const total = rows.length
+  const lowPercent = total > 0 ? Math.round((low / total) * 100) : 0
+  const mediumPercent = total > 0 ? Math.round((medium / total) * 100) : 0
+  const highPercent = total > 0 ? Math.max(0, 100 - lowPercent - mediumPercent) : 0
 
   const filtered = rows.filter((r) => r.nama.toLowerCase().includes(search.toLowerCase()))
 
@@ -172,18 +207,30 @@ export default function AnalisisPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-500">
+                    Memuat data analisis risiko nasabah...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="p-8 text-center text-slate-400">
-                    Tidak ditemukan data nasabah.
+                    Belum ada data analisis risiko nasabah.
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                    Tidak ditemukan data nasabah yang sesuai pencarian.
                   </td>
                 </tr>
               ) : (
                 filtered.map((row) => {
                   const badgeClass =
-                    row.risiko === 'Rendah'
+                    row.risiko.toLowerCase().includes('rendah') || row.risiko.toLowerCase().includes('layak')
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : row.risiko === 'Sedang'
+                      : row.risiko.toLowerCase().includes('sedang') || row.risiko.toLowerCase().includes('review')
                       ? 'bg-amber-50 text-amber-700 border-amber-200'
                       : 'bg-red-50 text-red-700 border-red-200'
 
@@ -199,7 +246,7 @@ export default function AnalisisPage() {
                             className={`h-full ${
                               row.rasio <= 30 ? 'bg-emerald-500' : row.rasio <= 50 ? 'bg-amber-500' : 'bg-red-500'
                             }`}
-                            style={{ width: `${Math.min(100, row.rasio)}%` }}
+                            style={{ width: `${Math.min(100, Math.max(0, row.rasio))}%` }}
                           />
                         </div>
                       </td>

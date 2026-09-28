@@ -65,9 +65,16 @@ export class NasabahService {
             data.kategoriRisikoPekerjaan = analisisRisiko.kategoriRisiko;
         }
 
-        return await this.prisma.nasabah.create({
-            data,
-        });
+        try {
+            return await this.prisma.nasabah.create({
+                data,
+            });
+        } catch (error: any) {
+            if (error?.code === 'P2002' || error?.message?.includes('Unique constraint')) {
+                throw new BadRequestException('NIK sudah terdaftar atas nasabah lain');
+            }
+            throw error;
+        }
     }
 
     async findAllPaginated(
