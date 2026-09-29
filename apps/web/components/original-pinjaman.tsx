@@ -43,7 +43,11 @@ export function hitungBunga(jumlah: number): number {
     if (jumlah < 10_000_000) return 0.5
     if (jumlah < 15_000_000) return 1
     if (jumlah < 20_000_000) return 1.5
-    return 2
+    if (jumlah <= 100_000_000) return 2
+    if (jumlah <= 250_000_000) return 2.5
+    if (jumlah <= 500_000_000) return 3
+    if (jumlah <= 1_000_000_000) return 3.5
+    return 4
 }
 
 const money = (value: number) =>

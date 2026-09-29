@@ -81,7 +81,11 @@ export default function PengajuanSimpananPage() {
         if (nominal < 10_000_000) return 0.5
         if (nominal < 15_000_000) return 1
         if (nominal < 20_000_000) return 1.5
-        return 2
+        if (nominal <= 100_000_000) return 2
+        if (nominal <= 250_000_000) return 2.5
+        if (nominal <= 500_000_000) return 3
+        if (nominal <= 1_000_000_000) return 3.5
+        return 4
     }
 
     const handleSubmit = async (e: React.FormEvent) => {

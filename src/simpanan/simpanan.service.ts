@@ -20,7 +20,11 @@ export class SimpananService {
         if (balance < 10_000_000) return 0.5;
         if (balance < 15_000_000) return 1;
         if (balance < 20_000_000) return 1.5;
-        return 2;
+        if (balance <= 100_000_000) return 2;
+        if (balance <= 250_000_000) return 2.5;
+        if (balance <= 500_000_000) return 3;
+        if (balance <= 1_000_000_000) return 3.5;
+        return 4;
     }
 
     private calculateMonthlyInterest(

@@ -136,7 +136,15 @@ function TransaksiContent() {
                 ? 1
                 : totalSaldoSimpanan < 20_000_000
                 ? 1.5
-                : 2
+                : totalSaldoSimpanan <= 100_000_000
+                ? 2
+                : totalSaldoSimpanan <= 250_000_000
+                ? 2.5
+                : totalSaldoSimpanan <= 500_000_000
+                ? 3
+                : totalSaldoSimpanan <= 1_000_000_000
+                ? 3.5
+                : 4
             : 0
 
     // Load All Data

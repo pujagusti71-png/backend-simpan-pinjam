@@ -22,8 +22,8 @@ import {
     Sparkles,
     UserCheck,
     UserPlus,
-} from 'lucide-react'
 import { api, apiFetch } from '@/lib/api'
+import { hitungBunga } from '@/components/original-pinjaman'
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('id-ID', {
@@ -52,6 +52,7 @@ export default function PengajuanPinjamanPage() {
         alamat: '',
         pekerjaan: 'Wiraswasta',
         penghasilan: '6000000',
+        estimasiPengeluaran: '2500000',
         jumlahTanggungan: '2',
 
         // Data Pemohon (jika sudah terdaftar)
@@ -59,11 +60,10 @@ export default function PengajuanPinjamanPage() {
 
         // Data Pinjaman
         jumlahPinjaman: '10000000',
+        tanggalPinjaman: new Date().toISOString().slice(0, 10),
         tenor: '12',
-        sukuBunga: '1.2', // % per bulan
         jenisBunga: 'flat' as 'flat' | 'efektif',
         tujuan: 'Modal Usaha',
-        catatan: 'Pengajuan modal kerja usaha',
     })
 
     useEffect(() => {
@@ -83,11 +83,14 @@ export default function PengajuanPinjamanPage() {
         fetchNasabah()
     }, [])
 
+    // Bunga otomatis sistem berdasarkan jumlah pinjaman
+    const bungaOtomatis = hitungBunga(Number(form.jumlahPinjaman) || 0)
+
     // Simulasi Kalkulator Cicilan
     const simulation = useMemo(() => {
         const principal = Number(form.jumlahPinjaman) || 0
         const tenorMonths = Number(form.tenor) || 1
-        const monthlyRate = Number(form.sukuBunga) / 100
+        const monthlyRate = bungaOtomatis / 100
 
         if (principal <= 0 || tenorMonths <= 0) {
             return {
@@ -142,7 +145,7 @@ export default function PengajuanPinjamanPage() {
             rasioCicilan: Math.round(rasioCicilan),
             riskCategory,
         }
-    }, [form.jumlahPinjaman, form.tenor, form.sukuBunga, form.jenisBunga, form.penghasilan, form.nasabahId, mode, nasabahList])
+    }, [form.jumlahPinjaman, form.tenor, bungaOtomatis, form.jenisBunga, form.penghasilan, form.nasabahId, mode, nasabahList])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -176,9 +179,12 @@ export default function PengajuanPinjamanPage() {
                     alamat: form.alamat.trim() || 'Alamat belum diisi',
                     pekerjaan: form.pekerjaan,
                     penghasilan: Number(form.penghasilan) || 4000000,
+                    estimasiPengeluaran: Number(form.estimasiPengeluaran) || 0,
+                    tanggalPinjaman: form.tanggalPinjaman,
                     jumlahPinjaman: jumlah,
                     tenor: Number(form.tenor),
-                    sukuBunga: Number(form.sukuBunga),
+                    sukuBunga: bungaOtomatis,
+                    bunga: bungaOtomatis,
                     jenisBunga: form.jenisBunga,
                     tujuan: form.tujuan,
                     risiko: simulation.riskCategory,
@@ -206,9 +212,11 @@ export default function PengajuanPinjamanPage() {
 
                 const payload = {
                     nasabahId: Number(form.nasabahId),
+                    tanggalPinjaman: form.tanggalPinjaman,
                     jumlahPinjaman: jumlah,
                     tenor: Number(form.tenor),
-                    sukuBunga: Number(form.sukuBunga),
+                    sukuBunga: bungaOtomatis,
+                    bunga: bungaOtomatis,
                     jenisBunga: form.jenisBunga,
                     tujuan: form.tujuan,
                     risiko: simulation.riskCategory,
@@ -486,6 +494,20 @@ export default function PengajuanPinjamanPage() {
                                         />
                                     </div>
 
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Estimasi Pengeluaran Bulanan (Rp)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={form.estimasiPengeluaran}
+                                            onChange={(e) => setForm({ ...form, estimasiPengeluaran: e.target.value })}
+                                            placeholder="2500000"
+                                            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                                        />
+                                    </div>
+
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-slate-700">
                                             Alamat Lengkap
@@ -582,10 +604,23 @@ export default function PengajuanPinjamanPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700">
+                                            Tanggal Pinjaman <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={form.tanggalPinjaman}
+                                            onChange={(e) => setForm({ ...form, tanggalPinjaman: e.target.value })}
+                                            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
                                             Suku Bunga Pinjaman
                                         </label>
                                         <div className="mt-1.5 flex items-center justify-between rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm">
-                                            <span>{form.sukuBunga}% per Bulan</span>
+                                            <span>{bungaOtomatis}% per Bulan</span>
                                             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
                                                 Bunga Otomatis Sistem
                                             </span>
@@ -608,7 +643,7 @@ export default function PengajuanPinjamanPage() {
 
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700">
-                                            Tujuan Penggunaan Pinjaman
+                                            Tujuan Penggunaan Pinjaman <span className="text-rose-500">*</span>
                                         </label>
                                         <select
                                             value={form.tujuan}
@@ -621,19 +656,6 @@ export default function PengajuanPinjamanPage() {
                                             <option value="Pengobatan">Kesehatan / Pengobatan</option>
                                             <option value="Konsumtif">Kebutuhan Konsumtif / Lainnya</option>
                                         </select>
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Catatan / Jaminan (Opsional)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={form.catatan}
-                                            onChange={(e) => setForm({ ...form, catatan: e.target.value })}
-                                            placeholder="Keterangan tambahan atau jaminan jika ada..."
-                                            className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
-                                        />
                                     </div>
                                 </div>
                             </div>

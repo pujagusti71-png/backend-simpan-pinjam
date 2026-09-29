@@ -163,7 +163,11 @@ export class PinjamanService {
         if (jumlahPinjaman < 10_000_000) return 0.5;
         if (jumlahPinjaman < 15_000_000) return 1;
         if (jumlahPinjaman < 20_000_000) return 1.5;
-        return 2;
+        if (jumlahPinjaman <= 100_000_000) return 2;
+        if (jumlahPinjaman <= 250_000_000) return 2.5;
+        if (jumlahPinjaman <= 500_000_000) return 3;
+        if (jumlahPinjaman <= 1_000_000_000) return 3.5;
+        return 4;
     }
 
     private async ensureNasabah(payload: ReturnType<PinjamanService['normalizePayload']>) {

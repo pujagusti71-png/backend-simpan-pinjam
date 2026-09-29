@@ -29,7 +29,11 @@ export class SimpananService {
         if (saldo < 10_000_000) return 0.5;
         if (saldo < 15_000_000) return 1;
         if (saldo < 20_000_000) return 1.5;
-        return 2;
+        if (saldo <= 100_000_000) return 2;
+        if (saldo <= 250_000_000) return 2.5;
+        if (saldo <= 500_000_000) return 3;
+        if (saldo <= 1_000_000_000) return 3.5;
+        return 4;
     }
 
     /**
