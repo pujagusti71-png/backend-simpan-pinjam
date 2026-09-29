@@ -22,6 +22,7 @@ import {
     Sparkles,
     UserCheck,
     UserPlus,
+} from 'lucide-react'
 import { api, apiFetch } from '@/lib/api'
 import { hitungBunga } from '@/components/original-pinjaman'
 
