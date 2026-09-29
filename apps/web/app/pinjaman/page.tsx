@@ -1,48 +1,20 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import {
   PlusCircle,
   ShieldCheck,
   Search,
   CreditCard,
-  User,
   FileText,
   Clock,
   Calendar,
   CheckCircle,
-  X,
 } from 'lucide-react'
 
 import { api } from '@/lib/api'
-import OriginalPinjaman from '@/components/original-pinjaman'
-
-const actionCards = [
-  {
-    icon: PlusCircle,
-    title: 'Pengajuan Baru',
-    description: 'Buat pengajuan pinjaman baru',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Analisis & Skor Risiko',
-    description: 'Analisis risiko otomatis berbasis data',
-    href: '/pinjaman/analisis-skor-risiko',
-  },
-  {
-    icon: Search,
-    title: 'Pre-Loan Checking',
-    description: 'Cek kelayakan awal sebelum pengajuan',
-    href: '/pinjaman/pre-loan-checking',
-  },
-  {
-    icon: CreditCard,
-    title: 'Pembayaran',
-    description: 'Catat pembayaran cicilan nasabah',
-    href: '/pinjaman/pembayaran',
-  },
-]
+import OriginalPinjaman, { hitungBunga } from '@/components/original-pinjaman'
+import type { LoanForm } from '@/components/original-pinjaman'
 
 type NasabahDetail = {
   id: number
@@ -61,94 +33,54 @@ type NasabahDetail = {
   pekerjaan: string
   penghasilan: number
   cicilan: number
+  estimasiPengeluaran: number
   riwayatPembayaran: string
   rasio: number
-  bi: {
-    status: string
-    tempat: number
-    totalHutang: number
-    adaTunggakan: boolean
-    catatan: string
-  }
   jumlah: number
   tenor: number
   bunga: string
   tujuan: string
+  tanggalPinjaman: string
   slik: string
   jumlahLembaga: string
   totalHutangLain: string
   adaTunggakan: string
-  catatan: string
   risiko: string
   risk: string
   rekomendasi: string
 }
 
-const summaryRows = [
-  {
-    icon: FileText,
-    label: 'Pinjaman Aktif',
-    value: '125',
-    iconBg: 'bg-blue-50',
-    iconText: 'text-blue-600',
-  },
-  {
-    icon: Clock,
-    label: 'Telat Bayar',
-    value: '28',
-    iconBg: 'bg-red-50',
-    iconText: 'text-red-500',
-  },
-  {
-    icon: Calendar,
-    label: 'Akan Jatuh Tempo (7 Hari)',
-    value: '18',
-    iconBg: 'bg-orange-50',
-    iconText: 'text-orange-500',
-  },
-  {
-    icon: CheckCircle,
-    label: 'Lunas Bulan Ini',
-    value: '32',
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-500',
-  },
-]
+const defaultForm: LoanForm = {
+  nama: '',
+  nik: '',
+  noHp: '',
+  email: '',
+  tanggalLahir: '',
+  alamat: '',
+  namaIbu: '',
+  tanggalLahirIbu: '',
+  alamatIbu: '',
+  pekerjaan: 'PNS',
+  penghasilan: '',
+  cicilan: '',
+  estimasiPengeluaran: '',
+  riwayat: 'Lancar',
+  jumlahLembaga: '0',
+  totalHutangLain: '0',
+  adaTunggakan: 'Tidak Ada',
+  jumlahPinjaman: '',
+  tanggalPinjaman: '',
+  tenor: '12',
+  bunga: '0',
+  tujuan: '',
+}
 
 export default function PinjamanPage() {
-  const [selectedNasabah, setSelectedNasabah] = useState<NasabahDetail | null>(null)
   const [isPengajuanOpen, setIsPengajuanOpen] = useState(false)
-  const [isAllPengajuanOpen, setIsAllPengajuanOpen] = useState(false)
-  const [pengajuanForm, setPengajuanForm] = useState({
-    nama: '',
-    nik: '',
-    noRekening: '',
-    noHp: '',
-    email: '',
-    tanggalLahir: '',
-    alamat: '',
-    namaIbu: '',
-    tanggalLahirIbu: '',
-    alamatIbu: '',
-    pekerjaan: 'PNS',
-    penghasilan: '',
-    cicilan: '',
-    riwayat: 'Lancar',
-    slik: 'K1',
-    jumlahLembaga: '0',
-    totalHutangLain: '0',
-    adaTunggakan: 'Tidak Ada',
-    catatan: '',
-    jumlahPinjaman: '',
-    tenor: '12',
-    bunga: '12',
-    tujuan: '',
-  })
+  const [pengajuanForm, setPengajuanForm] = useState<LoanForm>(defaultForm)
   const [pengajuanList, setPengajuanList] = useState<NasabahDetail[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
-  const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editForm, setEditForm] = useState<NasabahDetail>({} as NasabahDetail)
 
   useEffect(() => {
     const loadPinjaman = async () => {
@@ -174,25 +106,19 @@ export default function PinjamanPage() {
             },
             pekerjaan: item.pekerjaan ?? 'PNS',
             penghasilan: Number(item.penghasilan ?? 0),
-            cicilan: Number(item.cicilan ?? 0),
+            cicilan: Number(item.cicilan ?? item.cicilanBulanan ?? 0),
+            estimasiPengeluaran: Number(item.estimasiPengeluaran ?? 0),
             riwayatPembayaran: item.riwayatPembayaran ?? item.riwayat ?? 'Lancar',
             rasio: Number(item.rasio ?? 0),
-            bi: {
-              status: item.slik ?? item.bi?.status ?? 'K1',
-              tempat: Number(item.jumlahLembaga ?? item.bi?.tempat ?? 0),
-              totalHutang: Number(item.totalHutangLain ?? item.bi?.totalHutang ?? 0),
-              adaTunggakan: Boolean(item.adaTunggakan ?? item.bi?.adaTunggakan),
-              catatan: item.catatan ?? item.bi?.catatan ?? '',
-            },
             jumlah: Number(item.jumlah ?? item.jumlahPinjaman ?? 0),
-            tenor: Number(item.tenor ?? 12),
-            bunga: item.bunga ?? '',
+            tenor: Number(item.tenor ?? item.tenorBulan ?? 12),
+            bunga: String(item.bunga ?? item.sukuBunga ?? 0),
             tujuan: item.tujuan ?? '',
+            tanggalPinjaman: item.tanggalPinjaman ?? item.tanggalPengajuan ?? '',
             slik: item.slik ?? item.bi?.status ?? 'K1',
-            jumlahLembaga: String(item.jumlahLembaga ?? item.bi?.tempat ?? 0),
-            totalHutangLain: String(item.totalHutangLain ?? item.bi?.totalHutang ?? 0),
-            adaTunggakan: item.adaTunggakan ? 'Ada Tunggakan' : item.bi?.adaTunggakan ? 'Ada Tunggakan' : 'Tidak Ada',
-            catatan: item.catatan ?? item.bi?.catatan ?? '',
+            jumlahLembaga: String(item.jumlahLembaga ?? 0),
+            totalHutangLain: String(item.totalHutangLain ?? 0),
+            adaTunggakan: item.adaTunggakan ? 'Ada Tunggakan' : 'Tidak Ada',
             risiko: item.risiko ?? 'Rendah',
             risk: item.risk ?? item.risiko ?? 'Rendah',
             rekomendasi: item.rekomendasi ?? 'Approve',
@@ -212,56 +138,36 @@ export default function PinjamanPage() {
     loadPinjaman()
   }, [])
 
-  const openModal = (row: NasabahDetail) => {
-    setSelectedNasabah(row)
-  }
-
-  const closeModal = () => {
-    setSelectedNasabah(null)
-  }
-
-  const openEditModal = () => {
-    if (!selectedNasabah) return
-    setEditForm({ ...selectedNasabah })
-    setSelectedNasabah(null)
-    setIsEditOpen(true)
-  }
-
-  const closeEditModal = () => {
-    setIsEditOpen(false)
-    setEditForm({} as NasabahDetail)
-  }
-
-  const openPengajuanModal = () => {
-    setIsPengajuanOpen(true)
-  }
-
-  const openAllPengajuanModal = () => {
-    setIsAllPengajuanOpen(true)
-  }
-
-  const closeAllPengajuanModal = () => {
-    setIsAllPengajuanOpen(false)
-  }
-
-
-
   const handleCreatePengajuan = async () => {
     const penghasilan = Number(pengajuanForm.penghasilan)
     const cicilan = Number(pengajuanForm.cicilan)
+    const estimasiPengeluaran = Number(pengajuanForm.estimasiPengeluaran)
     const jumlahPinjaman = Number(pengajuanForm.jumlahPinjaman)
+    const tenor = Number(pengajuanForm.tenor || 0)
     const rasio = penghasilan > 0 ? (cicilan / penghasilan) * 100 : 0
+
+    // Hitung bunga otomatis berdasarkan jumlah pinjaman
+    const bungaOtomatis = hitungBunga(jumlahPinjaman)
+
     let calculatedRisk = 'Rendah'
+    if (rasio > 50) calculatedRisk = 'Tinggi'
+    else if (rasio > 30) calculatedRisk = 'Sedang'
 
-    if (['K3', 'K4', 'K5'].includes(pengajuanForm.slik)) {
-      calculatedRisk = 'Tinggi'
-    } else if (pengajuanForm.slik === 'K2') {
-      calculatedRisk = rasio > 30 ? 'Tinggi' : 'Sedang'
-    } else if (pengajuanForm.slik === 'K1') {
-      calculatedRisk = rasio <= 30 ? 'Rendah' : rasio <= 50 ? 'Sedang' : 'Tinggi'
-    }
+    const recommendation =
+      calculatedRisk === 'Rendah' ? 'Approve' : calculatedRisk === 'Sedang' ? 'Review' : 'Reject'
 
-    const recommendation = calculatedRisk === 'Rendah' ? 'Approve' : calculatedRisk === 'Sedang' ? 'Review' : 'Reject'
+    // Hitung cicilan bulanan
+    const monthlyRate = bungaOtomatis / 100 / 12
+    const cicilanBulanan =
+      tenor > 0
+        ? bungaOtomatis === 0
+          ? jumlahPinjaman / tenor
+          : (jumlahPinjaman * monthlyRate * Math.pow(1 + monthlyRate, tenor)) /
+            (Math.pow(1 + monthlyRate, tenor) - 1)
+        : 0
+
+    const totalBunga = Math.round((cicilanBulanan * tenor - jumlahPinjaman) * 100) / 100
+    const totalPembayaran = Math.round((jumlahPinjaman + totalBunga) * 100) / 100
 
     const payload = {
       nama: pengajuanForm.nama,
@@ -269,16 +175,21 @@ export default function PinjamanPage() {
       email: pengajuanForm.email,
       penghasilan,
       cicilan,
+      estimasiPengeluaran,
       jumlah: jumlahPinjaman,
-      tenor: Number(pengajuanForm.tenor || 0),
-      bunga: Number(pengajuanForm.bunga || 12),
+      tenor,
+      bunga: bungaOtomatis,
       tujuan: pengajuanForm.tujuan,
+      tanggalPinjaman: pengajuanForm.tanggalPinjaman,
       risiko: calculatedRisk,
       rekomendasi: recommendation,
-      jumlahPinjaman: jumlahPinjaman,
-      tenorBulan: Number(pengajuanForm.tenor || 0),
-      sukuBunga: Number(pengajuanForm.bunga || 12),
+      jumlahPinjaman,
+      tenorBulan: tenor,
+      sukuBunga: bungaOtomatis,
       jenisBunga: 'efektif',
+      cicilanBulanan: Math.round(cicilanBulanan * 100) / 100,
+      totalBunga,
+      totalPembayaran,
     }
 
     try {
@@ -288,7 +199,7 @@ export default function PinjamanPage() {
         id: Number(saved?.id ?? Date.now()),
         nama: pengajuanForm.nama,
         nik: pengajuanForm.nik,
-        rekening: pengajuanForm.noRekening,
+        rekening: '',
         hp: pengajuanForm.noHp,
         email: pengajuanForm.email,
         lahir: pengajuanForm.tanggalLahir,
@@ -301,55 +212,25 @@ export default function PinjamanPage() {
         pekerjaan: pengajuanForm.pekerjaan,
         penghasilan,
         cicilan,
+        estimasiPengeluaran,
         riwayatPembayaran: pengajuanForm.riwayat,
         rasio: Number(rasio.toFixed(1)),
-        bi: {
-          status: pengajuanForm.slik,
-          tempat: Number(pengajuanForm.jumlahLembaga),
-          totalHutang: Number(pengajuanForm.totalHutangLain),
-          adaTunggakan: pengajuanForm.adaTunggakan === 'Ada Tunggakan',
-          catatan: pengajuanForm.catatan,
-        },
         jumlah: jumlahPinjaman,
-        tenor: Number(pengajuanForm.tenor),
-        bunga: pengajuanForm.bunga,
+        tenor,
+        bunga: String(bungaOtomatis),
         tujuan: pengajuanForm.tujuan,
-        slik: pengajuanForm.slik,
+        tanggalPinjaman: pengajuanForm.tanggalPinjaman,
+        slik: 'K1',
         jumlahLembaga: pengajuanForm.jumlahLembaga,
         totalHutangLain: pengajuanForm.totalHutangLain,
         adaTunggakan: pengajuanForm.adaTunggakan,
-        catatan: pengajuanForm.catatan,
         risiko: calculatedRisk,
         risk: calculatedRisk,
         rekomendasi: recommendation,
       }
 
       setPengajuanList((current) => [newSubmission, ...current])
-      setPengajuanForm({
-        nama: '',
-        nik: '',
-        noRekening: '',
-        noHp: '',
-        email: '',
-        tanggalLahir: '',
-        alamat: '',
-        namaIbu: '',
-        tanggalLahirIbu: '',
-        alamatIbu: '',
-        pekerjaan: 'PNS',
-        penghasilan: '',
-        cicilan: '',
-        riwayat: 'Lancar',
-        slik: 'K1',
-        jumlahLembaga: '0',
-        totalHutangLain: '0',
-        adaTunggakan: 'Tidak Ada',
-        catatan: '',
-        jumlahPinjaman: '',
-        tenor: '12',
-        bunga: '12',
-        tujuan: '',
-      })
+      setPengajuanForm(defaultForm)
       setIsPengajuanOpen(false)
       alert('Pengajuan berhasil ditambahkan!')
     } catch (error) {
@@ -358,134 +239,18 @@ export default function PinjamanPage() {
     }
   }
 
-  const handleUpdatePengajuan = async () => {
-    if (!editForm) return
-
-    const penghasilan = Number(editForm.penghasilan)
-    const cicilan = Number(editForm.cicilan)
-    const newRasio = penghasilan > 0 ? Number(((cicilan / penghasilan) * 100).toFixed(1)) : 0
-    let calculatedRisk = 'Rendah'
-
-
-    if (['K3', 'K4', 'K5'].includes(editForm.slik)) {
-      calculatedRisk = 'Tinggi'
-    } else if (editForm.slik === 'K2') {
-      calculatedRisk = newRasio > 30 ? 'Tinggi' : 'Sedang'
-    } else if (editForm.slik === 'K1') {
-      calculatedRisk = newRasio <= 30 ? 'Rendah' : newRasio <= 50 ? 'Sedang' : 'Tinggi'
-    }
-
-    const recommendation = calculatedRisk === 'Rendah' ? 'Approve' : calculatedRisk === 'Sedang' ? 'Review' : 'Reject'
-
-    const jumlahPinjaman = Number(editForm.jumlah)
-    const tenor = Number(editForm.tenor)
-    const sukuBunga = Number(editForm.bunga || 0)
-
-    if (isNaN(jumlahPinjaman) || jumlahPinjaman <= 0) {
-      alert('Jumlah pinjaman tidak valid.')
-      return
-    }
-
-    if (isNaN(tenor) || tenor <= 0) {
-      alert('Tenor tidak valid.')
-      return
-    }
-
-    if (isNaN(sukuBunga) || sukuBunga < 0) {
-      alert('Suku bunga tidak valid.')
-      return
-    }
-
-    const monthlyRate = sukuBunga / 100 / 12
-    const cicilanBulanan = tenor > 0
-      ? (jumlahPinjaman * monthlyRate * Math.pow(1 + monthlyRate, tenor)) /
-      (Math.pow(1 + monthlyRate, tenor) - 1)
-      : 0
-    const totalBunga = Math.round((cicilanBulanan * tenor - jumlahPinjaman) * 100) / 100
-    const totalPembayaran = Math.round((jumlahPinjaman + totalBunga) * 100) / 100
-
-    const payload = {
-      jumlahPinjaman,
-      tenor,
-      sukuBunga,
-      cicilanBulanan: Math.round(cicilanBulanan * 100) / 100,
-      totalBunga,
-      totalPembayaran,
-    }
-
-    try {
-      await api.updatePinjaman(Number(editForm.id), payload)
-      setPengajuanList((prev) =>
-        prev.map((item) =>
-          item.id === editForm.id
-            ? {
-              ...item,
-              jumlah: jumlahPinjaman,
-              tenor,
-              bunga: String(sukuBunga),
-              cicilan: Number(editForm.cicilan),
-              rasio: newRasio,
-              risiko: calculatedRisk,
-              rekomendasi: recommendation,
-            }
-            : item
-        )
-      )
-      setIsEditOpen(false)
-      setEditForm({} as NasabahDetail)
-      alert('Data berhasil diperbarui!')
-    } catch (error) {
-      console.error('Gagal memperbarui pengajuan', error)
-      alert(error instanceof Error ? error.message : 'Gagal memperbarui pengajuan.')
-    }
-  }
-
-  const renderRiskBadge = (risk: string) => {
-    const base = 'rounded-full px-2.5 py-0.5 text-xs font-semibold'
-    if (risk === 'Rendah') return `${base} bg-green-50 text-green-600`
-    if (risk === 'Sedang') return `${base} bg-yellow-50 text-yellow-600`
-    return `${base} bg-red-50 text-red-600`
-  }
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      maximumFractionDigits: 0,
-    }).format(value)
-
-  const biStatusMap: Record<
-    string,
-    { label: string; className: string }
-  > = {
-    K1: { label: 'Lancar', className: 'bg-emerald-50 text-emerald-600' },
-    K2: { label: 'Perlu Diperhatikan', className: 'bg-yellow-50 text-yellow-600' },
-    K3: { label: 'Mulai Bermasalah', className: 'bg-orange-50 text-orange-600' },
-    K4: { label: 'Bermasalah', className: 'bg-red-50 text-red-600' },
-    K5: { label: 'Macet Total', className: 'bg-rose-950 text-white' },
-  }
-
-  const renderPaymentBadge = (status: string) => {
-    const base = 'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold'
-    if (status === 'Lancar') return `${base} bg-emerald-50 text-emerald-600`
-    return `${base} bg-red-50 text-red-600`
-  }
-
-  const formatTenor = (tenor: string | number) =>
-    typeof tenor === 'number'
-      ? `${tenor} bulan`
-      : tenor.includes('bulan')
-        ? tenor
-        : `${tenor} bulan`
-
-  const getRatioColor = (ratio: number) => {
-    if (ratio <= 30) return 'bg-emerald-500'
-    if (ratio <= 50) return 'bg-yellow-400'
-    return 'bg-red-500'
-  }
-
   return (
     <>
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70">
+          <div className="text-slate-500 text-sm">Memuat data pinjaman...</div>
+        </div>
+      )}
+      {fetchError && (
+        <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-red-50 border border-red-200 p-4 text-sm text-red-600 shadow">
+          {fetchError}
+        </div>
+      )}
       <OriginalPinjaman
         rows={pengajuanList.map((row) => ({
           id: row.id,
@@ -496,10 +261,24 @@ export default function PinjamanPage() {
           risiko: row.risiko,
           rekomendasi: row.rekomendasi,
         }))}
-        onNew={openPengajuanModal}
+        detailRows={pengajuanList.map((row) => ({
+          id: row.id,
+          nama: row.nama,
+          pekerjaan: row.pekerjaan,
+          jumlah: row.jumlah,
+          tenor: row.tenor,
+          bunga: row.bunga,
+          tujuan: row.tujuan,
+          tanggalPinjaman: row.tanggalPinjaman,
+          penghasilan: row.penghasilan,
+          estimasiPengeluaran: row.estimasiPengeluaran,
+          cicilan: row.cicilan,
+          risiko: row.risiko,
+          rekomendasi: row.rekomendasi,
+        }))}
+        onNew={() => setIsPengajuanOpen(true)}
         onSelect={(id) => {
-          const row = pengajuanList.find((item) => item.id === id)
-          if (row) openModal(row)
+          // handled inside component via View button
         }}
         isNewOpen={isPengajuanOpen}
         form={pengajuanForm}

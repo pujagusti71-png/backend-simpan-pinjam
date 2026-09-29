@@ -2,16 +2,17 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { Eye, X } from "lucide-react"
 
 type SavingsRow = [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
+  string, // 0: initials
+  string, // 1: nama
+  string, // 2: status keanggotaan
+  string, // 3: no rekening
+  string, // 4: jenis simpanan
+  string, // 5: saldo formatted
+  string, // 6: AKTIF / TIDAK AKTIF
+  string, // 7: color
 ]
 
 export default function OriginalSimpanan({
@@ -22,6 +23,7 @@ export default function OriginalSimpanan({
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState("Semua Status")
   const [type, setType] = useState("Semua Tipe")
+  const [viewRow, setViewRow] = useState<SavingsRow | null>(null)
   const visibleRows = rows.filter(
     (row) =>
       row[1].toLowerCase().includes(query.toLowerCase()) &&
@@ -212,13 +214,12 @@ export default function OriginalSimpanan({
                   </td>
                   <td className="border-b border-slate-200 p-4">
                     <button
-                      className="rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-2xs"
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-sm"
                       type="button"
-                      onClick={() => {
-                        window.location.href = `/simpanan/data?rekening=${encodeURIComponent(row[3])}`
-                      }}
+                      onClick={() => setViewRow(row)}
                     >
-                      Detail
+                      <Eye className="h-3.5 w-3.5 text-slate-500" />
+                      View
                     </button>
                   </td>
                 </tr>
@@ -230,6 +231,87 @@ export default function OriginalSimpanan({
           Menampilkan {visibleRows.length} data simpanan
         </div>
       </section>
+
+      {/* Modal View Detail Simpanan */}
+      {viewRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-10">
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-5">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Detail Simpanan</h3>
+                <p className="text-xs text-slate-500">{viewRow[3]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewRow(null)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold ${
+                    viewRow[7] === "blue" ? "bg-blue-100 text-blue-700" :
+                    viewRow[7] === "pink" ? "bg-pink-100 text-pink-700" :
+                    viewRow[7] === "yellow" ? "bg-amber-100 text-amber-700" :
+                    "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {viewRow[0]}
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-base">{viewRow[1]}</p>
+                  <p className="text-xs text-slate-500">{viewRow[2]}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 border border-slate-100">
+                <div>
+                  <span className="text-xs text-slate-400">No. Rekening</span>
+                  <p className="font-semibold text-slate-900 font-mono text-sm">{viewRow[3]}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Jenis Simpanan</span>
+                  <p className="font-semibold text-slate-800">{viewRow[4]}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Saldo</span>
+                  <p className="font-bold text-emerald-700">{viewRow[5]}</p>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-400">Status</span>
+                  <span
+                    className={`inline-block mt-1 rounded px-2 py-0.5 text-xs font-semibold ${
+                      viewRow[6] === "AKTIF" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {viewRow[6]}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end border-t border-slate-100 bg-slate-50 p-4 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = `/simpanan/data?rekening=${encodeURIComponent(viewRow[3])}`
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+              >
+                Lihat Buku Tabungan
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewRow(null)}
+                className="rounded-lg bg-green-700 px-5 py-2 text-sm font-semibold text-white hover:bg-green-800 transition"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

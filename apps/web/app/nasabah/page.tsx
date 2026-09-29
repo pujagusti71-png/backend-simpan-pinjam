@@ -53,7 +53,6 @@ type ProcessedNasabah = Nasabah & {
 type NasabahForm = {
   nama: string
   nik: string
-  noRek: string
   hp: string
   email: string
   lahir: string
@@ -64,12 +63,8 @@ type NasabahForm = {
   kerja: string
   gaji: string
   cicilan: string
+  estimasiPengeluaran: string
   riwayat: Nasabah['riwayat']
-  slik: Nasabah['slik']
-  lembaga: string
-  hutangLain: string
-  tunggakan: 'Tidak Ada' | 'Ada Tunggakan'
-  catatan: string
 }
 
 type SubmitState = {
@@ -194,7 +189,6 @@ const defaultSampleNasabah: Nasabah[] = [
 const initialForm: NasabahForm = {
   nama: '',
   nik: '',
-  noRek: '',
   hp: '',
   email: '',
   lahir: '',
@@ -205,12 +199,8 @@ const initialForm: NasabahForm = {
   kerja: 'PNS',
   gaji: '',
   cicilan: '',
+  estimasiPengeluaran: '',
   riwayat: 'Lancar',
-  slik: 'K1',
-  lembaga: '0',
-  hutangLain: '0',
-  tunggakan: 'Tidak Ada',
-  catatan: '',
 }
 
 export default function NasabahPage() {
@@ -226,7 +216,6 @@ export default function NasabahPage() {
   const {
     nama,
     nik,
-    noRek,
     hp,
     email,
     lahir,
@@ -237,12 +226,8 @@ export default function NasabahPage() {
     kerja,
     gaji,
     cicilan,
+    estimasiPengeluaran,
     riwayat,
-    slik,
-    lembaga,
-    hutangLain,
-    tunggakan,
-    catatan,
   } = form
 
   const setFormField = (field: string, value: any) =>
@@ -252,7 +237,6 @@ export default function NasabahPage() {
   const isFormValid =
     nama.trim() !== '' &&
     isNikValid &&
-    noRek.trim() !== '' &&
     hp.trim() !== '' &&
     email.trim() !== '' &&
     lahir !== '' &&
@@ -260,8 +244,7 @@ export default function NasabahPage() {
     ibuNama.trim() !== '' &&
     ibuLahir !== '' &&
     ibuAlamat.trim() !== '' &&
-    Number(gaji) > 0 &&
-    Number(cicilan) >= 0
+    Number(gaji) > 0
 
   useEffect(() => {
     const loadNasabah = async () => {
@@ -319,24 +302,15 @@ export default function NasabahPage() {
 
     setSubmitState({ isSubmitting: true, message: null, error: null })
 
+    // Payload sesuai CreateNasabahDto backend
     const payload = {
       nama,
       nik,
-      noRek,
-      hp,
-      email,
-      lahir,
       alamat,
-      ibu: { nama: ibuNama, lahir: ibuLahir, alamat: ibuAlamat },
-      kerja,
-      gaji: Number(gaji),
-      cicilan: Number(cicilan),
-      riwayat,
-      slik,
-      hutangLain: Number(hutangLain),
-      lembaga: Number(lembaga),
-      tunggakan: tunggakan === 'Ada Tunggakan',
-      catatan: catatan.trim() || undefined,
+      tanggalLahir: lahir || undefined,
+      pekerjaan: kerja,
+      penghasilan: Number(gaji),
+      estimasiPengeluaran: Number(estimasiPengeluaran) || undefined,
     }
 
     try {
@@ -344,38 +318,26 @@ export default function NasabahPage() {
       const savedId = created && typeof created === 'object' && 'id' in created ? String((created as any).id) : String(Date.now())
 
       const rasioVal = Number(gaji) > 0 ? (Number(cicilan) / Number(gaji)) * 100 : 0
-      const isHighBi = slik === 'K3' || slik === 'K4' || slik === 'K5'
-      const risikoVal = isHighBi
-        ? 'Tinggi'
-        : slik === 'K2'
-        ? rasioVal > 30
-          ? 'Tinggi'
-          : 'Sedang'
-        : rasioVal <= 30
-        ? 'Rendah'
-        : rasioVal <= 50
-        ? 'Sedang'
-        : 'Tinggi'
+      const risikoVal = rasioVal <= 30 ? 'Rendah' : rasioVal <= 50 ? 'Sedang' : 'Tinggi'
 
       const newNasabah: Nasabah = {
         id: savedId,
-        nama: payload.nama,
-        nik: payload.nik,
-        noRek: payload.noRek,
-        hp: payload.hp,
-        email: payload.email,
-        lahir: payload.lahir,
-        alamat: payload.alamat,
-        ibu: payload.ibu,
-        kerja: payload.kerja,
-        gaji: payload.gaji,
-        cicilan: payload.cicilan,
-        riwayat: payload.riwayat,
-        slik: payload.slik,
-        hutangLain: payload.hutangLain,
-        lembaga: payload.lembaga,
-        tunggakan: payload.tunggakan,
-        catatan: payload.catatan,
+        nama,
+        nik,
+        noRek: '-',
+        hp,
+        email,
+        lahir,
+        alamat,
+        ibu: { nama: ibuNama, lahir: ibuLahir, alamat: ibuAlamat },
+        kerja,
+        gaji: Number(gaji),
+        cicilan: Number(cicilan),
+        riwayat,
+        slik: 'K1',
+        hutangLain: 0,
+        lembaga: 0,
+        tunggakan: false,
         rasio: Number(rasioVal.toFixed(1)),
         risiko: risikoVal,
       }
@@ -569,17 +531,7 @@ export default function NasabahPage() {
                     <span className="text-[11px] text-red-500 mt-1 block">NIK harus 16 digit angka</span>
                   )}
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">No. Rekening *</label>
-                  <input
-                    type="text"
-                    value={noRek}
-                    onChange={(e) => setFormField('noRek', e.target.value)}
-                    placeholder="Contoh: SP-00105"
-                    required
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
-                  />
-                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">No. Handphone *</label>
                   <input
@@ -709,6 +661,18 @@ export default function NasabahPage() {
                   />
                 </div>
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Estimasi Pengeluaran / Bln (Rp)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50000"
+                    value={estimasiPengeluaran}
+                    onChange={(e) => setFormField('estimasiPengeluaran', e.target.value)}
+                    placeholder="Contoh: 2000000"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Riwayat Pembayaran</label>
                   <select
                     value={riwayat}
@@ -720,60 +684,6 @@ export default function NasabahPage() {
                         {opt}
                       </option>
                     ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* 4. BI Checking / SLIK */}
-            <div className="border-t border-slate-100 pt-4">
-              <h3 className="mb-3 text-sm font-bold text-green-800 uppercase tracking-wide">4. Catatan SLIK / BI Checking</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Kolektibilitas SLIK</label>
-                  <select
-                    value={slik}
-                    onChange={(e) => setFormField('slik', e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
-                  >
-                    <option value="K1">K1 - Lancar</option>
-                    <option value="K2">K2 - Dalam Perhatian Khusus</option>
-                    <option value="K3">K3 - Kurang Lancar</option>
-                    <option value="K4">K4 - Diragukan</option>
-                    <option value="K5">K5 - Macet</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Hutang di Tempat Lain (Rp)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={hutangLain}
-                    onChange={(e) => setFormField('hutangLain', e.target.value)}
-                    placeholder="0"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Jumlah Lembaga</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={lembaga}
-                    onChange={(e) => setFormField('lembaga', e.target.value)}
-                    placeholder="0"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Status Tunggakan</label>
-                  <select
-                    value={tunggakan}
-                    onChange={(e) => setFormField('tunggakan', e.target.value)}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-green-600 focus:ring-1 focus:ring-green-600 outline-none"
-                  >
-                    <option value="Tidak Ada">Tidak Ada Tunggakan</option>
-                    <option value="Ada Tunggakan">Ada Tunggakan</option>
                   </select>
                 </div>
               </div>
