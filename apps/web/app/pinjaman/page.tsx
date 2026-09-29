@@ -267,7 +267,7 @@ export default function PinjamanPage() {
           pekerjaan: row.pekerjaan,
           jumlah: row.jumlah,
           tenor: row.tenor,
-          bunga: row.bunga,
+          bunga: hitungBunga(row.jumlah),
           tujuan: row.tujuan,
           tanggalPinjaman: row.tanggalPinjaman,
           penghasilan: row.penghasilan,
@@ -282,7 +282,16 @@ export default function PinjamanPage() {
         }}
         isNewOpen={isPengajuanOpen}
         form={pengajuanForm}
-        onFormChange={(key, value) => setPengajuanForm((current) => ({ ...current, [key]: value }))}
+        onFormChange={(key, value) => {
+          setPengajuanForm((current) => {
+            const updated = { ...current, [key]: value }
+            // Auto-update bunga saat jumlah pinjaman berubah
+            if (key === 'jumlahPinjaman') {
+              updated.bunga = String(hitungBunga(Number(value)))
+            }
+            return updated
+          })
+        }}
         onSubmit={handleCreatePengajuan}
         onCancel={() => setIsPengajuanOpen(false)}
       />
