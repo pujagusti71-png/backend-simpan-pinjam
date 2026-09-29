@@ -154,11 +154,11 @@ export class PinjamanService {
     }
 
     private getLoanInterestRate(jumlahPinjaman: number): number {
-        if (jumlahPinjaman >= 100_000_000) return 2;
-        if (jumlahPinjaman >= 50_000_000) return 1.5;
-        if (jumlahPinjaman >= 20_000_000) return 1;
-        if (jumlahPinjaman >= 5_000_000) return 0.5;
-        return 0;
+        if (jumlahPinjaman < 5_000_000) return 0;
+        if (jumlahPinjaman < 10_000_000) return 0.5;
+        if (jumlahPinjaman < 15_000_000) return 1;
+        if (jumlahPinjaman < 20_000_000) return 1.5;
+        return 2;
     }
 
     private async ensureNasabah(payload: ReturnType<PinjamanService['normalizePayload']>) {

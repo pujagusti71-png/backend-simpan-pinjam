@@ -77,9 +77,11 @@ export default function PengajuanSimpananPage() {
 
     const calculatedBunga = () => {
         const nominal = Number(form.setoranAwal || 0)
-        if (nominal > 20_000_000) return 0.75
-        if (nominal > 5_000_000) return 0.5
-        return 0
+        if (nominal < 5_000_000) return 0
+        if (nominal < 10_000_000) return 0.5
+        if (nominal < 15_000_000) return 1
+        if (nominal < 20_000_000) return 1.5
+        return 2
     }
 
     const handleSubmit = async (e: React.FormEvent) => {

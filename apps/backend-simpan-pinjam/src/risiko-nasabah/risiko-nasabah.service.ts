@@ -309,11 +309,11 @@ export class RisikoNasabahService {
     }
 
     private getDefaultBunga(jumlah: number): number {
-        if (jumlah >= 100_000_000) return 2;
-        if (jumlah >= 50_000_000) return 1.5;
-        if (jumlah >= 20_000_000) return 1;
-        if (jumlah >= 5_000_000) return 0.5;
-        return 0;
+        if (jumlah < 5_000_000) return 0;
+        if (jumlah < 10_000_000) return 0.5;
+        if (jumlah < 15_000_000) return 1;
+        if (jumlah < 20_000_000) return 1.5;
+        return 2;
     }
 
     private hitungCicilan(

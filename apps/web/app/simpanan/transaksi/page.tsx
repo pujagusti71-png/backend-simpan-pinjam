@@ -125,9 +125,18 @@ function TransaksiContent() {
     })
 
     // Bunga Otomatis Simpanan
+    const totalSaldoSimpanan = selectedBalance + Number(simpananForm.nominal || 0)
     const autoRate =
-        Number(simpananForm.nominal) > 0 && selectedBalance + Number(simpananForm.nominal) > 5_000_000
-            ? 0.5
+        Number(simpananForm.nominal) > 0
+            ? totalSaldoSimpanan < 5_000_000
+                ? 0
+                : totalSaldoSimpanan < 10_000_000
+                ? 0.5
+                : totalSaldoSimpanan < 15_000_000
+                ? 1
+                : totalSaldoSimpanan < 20_000_000
+                ? 1.5
+                : 2
             : 0
 
     // Load All Data

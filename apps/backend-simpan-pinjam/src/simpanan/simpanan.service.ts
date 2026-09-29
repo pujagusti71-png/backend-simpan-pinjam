@@ -25,15 +25,11 @@ export class SimpananService {
     }
 
     private getBungaRateBySaldo(saldo: number): number {
-        if (saldo <= 5_000_000) {
-            return 0;
-        }
-
-        if (saldo > 5_000_000 && saldo <= 20_000_000) {
-            return 0.5;
-        }
-
-        return 0.5;
+        if (saldo < 5_000_000) return 0;
+        if (saldo < 10_000_000) return 0.5;
+        if (saldo < 15_000_000) return 1;
+        if (saldo < 20_000_000) return 1.5;
+        return 2;
     }
 
     /**
