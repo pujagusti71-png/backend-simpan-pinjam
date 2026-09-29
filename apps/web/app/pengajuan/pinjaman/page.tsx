@@ -251,14 +251,14 @@ export default function PengajuanPinjamanPage() {
             alamat: '',
             pekerjaan: 'Wiraswasta',
             penghasilan: '6000000',
+            estimasiPengeluaran: '2500000',
             jumlahTanggungan: '2',
             nasabahId: '',
             jumlahPinjaman: '10000000',
+            tanggalPinjaman: new Date().toISOString().slice(0, 10),
             tenor: '12',
-            sukuBunga: '1.2',
             jenisBunga: 'flat',
             tujuan: 'Modal Usaha',
-            catatan: 'Pengajuan modal kerja usaha',
         })
     }
 
