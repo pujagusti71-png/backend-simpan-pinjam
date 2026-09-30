@@ -103,6 +103,17 @@ export class SimpananController {
     }
 
     /**
+     * Process monthly interest for all active customers
+     * POST /simpanan/process-monthly-interest
+     */
+    @Post('process-monthly-interest')
+    @ApiOperation({ summary: 'Proses pembagian bunga bulanan untuk semua nasabah aktif' })
+    @ApiResponse({ status: 200, description: 'Bunga bulanan berhasil diproses' })
+    async processMonthlyInterest(@Body() body?: { bulan?: number; tahun?: number }) {
+        return this.simpananService.processMonthlyInterest(body?.bulan, body?.tahun);
+    }
+
+    /**
      * Apply interest to savings
      * POST /simpanan/apply-interest/:nasabahId
      */

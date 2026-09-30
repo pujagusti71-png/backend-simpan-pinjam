@@ -15,16 +15,12 @@ export class SimpananService {
      * 50.000.000 - 99.999.999 => 1.5%
      * >= 100.000.000     => 2%
      */
-    private getAnnualInterestRate(balance: number): number {
-        if (balance < 5_000_000) return 0;
-        if (balance < 10_000_000) return 0.5;
-        if (balance < 15_000_000) return 1;
-        if (balance < 20_000_000) return 1.5;
-        if (balance <= 100_000_000) return 2;
-        if (balance <= 250_000_000) return 2.5;
-        if (balance <= 500_000_000) return 3;
-        if (balance <= 1_000_000_000) return 3.5;
-        return 4;
+    public getAnnualInterestRate(balance: number): number {
+        if (balance < 1_000_000) return 0;
+        if (balance <= 10_000_000) return 2.0;
+        if (balance <= 50_000_000) return 3.0;
+        if (balance <= 100_000_000) return 3.75;
+        return 4.5;
     }
 
     private calculateMonthlyInterest(

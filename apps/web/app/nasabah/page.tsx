@@ -767,7 +767,7 @@ export default function NasabahPage() {
                 <th className="p-3">Pekerjaan</th>
                 <th className="p-3">Penghasilan / Bln</th>
                 <th className="p-3">Rasio Cicilan</th>
-                <th className="p-3">SLIK / BI</th>
+                <th className="p-3" title="Kolektibilitas SLIK OJK (Verifikasi Catatan Eksternal)">Kolektibilitas (SLIK)</th>
                 <th className="p-3">Risiko</th>
                 <th className="p-3 text-right">Aksi</th>
               </tr>
@@ -924,16 +924,22 @@ export default function NasabahPage() {
                 </div>
               </div>
 
-              {/* SLIK / BI Checking Status */}
+              {/* Status Kolektibilitas SLIK OJK (Verifikasi Dokumen Eksternal) */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-xl border border-slate-100 p-4">
-                  <span className="text-xs text-slate-400">Kolektibilitas SLIK</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Kolektibilitas SLIK OJK</span>
+                    <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Catatan Eksternal</span>
+                  </div>
                   <div className="mt-2">
                     <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-bold border ${selectedNasabah.biBadgeClass}`}>
                       {selectedNasabah.biStatusLabel}
                     </span>
                     <p className="text-xs text-slate-500 mt-2">
-                      Total Hutang Lain: {currencyFormatter.format(selectedNasabah.hutangLain)} ({selectedNasabah.lembaga} lembaga)
+                      Total Hutang Luar: {currencyFormatter.format(selectedNasabah.hutangLain)} ({selectedNasabah.lembaga} lembaga)
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                      *Riwayat kredit perbankan / leasing dari berkas SLIK nasabah.
                     </p>
                   </div>
                 </div>

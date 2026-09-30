@@ -7,33 +7,28 @@ export class SimpananService {
     constructor(private prisma: PrismaService) { }
 
     /**
-     * Calculate interest based on savings amount, rate, and type
+     * Suku bunga simpanan tahunan berjenjang (p.a.) standar koperasi simpan pinjam:
+     * - < Rp 1.000.000: 0% (saldo minimum)
+     * - Rp 1.000.000 s/d Rp 10.000.000: 2.0% p.a. (~0.167% / bln)
+     * - > Rp 10.000.000 s/d Rp 50.000.000: 3.0% p.a. (~0.25% / bln)
+     * - > Rp 50.000.000 s/d Rp 100.000.000: 3.75% p.a. (~0.3125% / bln)
+     * - > Rp 100.000.000: 4.5% p.a. (~0.375% / bln)
      */
-    private calculateInterest(
-        saldoSebelumnya: number,
-        bungaSimpanan: number,
-        jenisInterest: 'flat' | 'efektif' = 'flat',
-    ): number {
-        if (jenisInterest === 'flat') {
-            // Flat interest: (balance * rate) / 100
-            return Math.round((saldoSebelumnya * bungaSimpanan) / 100 * 100) / 100;
-        } else {
-            // Compound interest: balance * (1 + rate/100)
-            const nilaiDenganBunga = saldoSebelumnya * (1 + bungaSimpanan / 100);
-            return Math.round((nilaiDenganBunga - saldoSebelumnya) * 100) / 100;
-        }
+    public getAnnualInterestRate(saldo: number): number {
+        if (saldo < 1_000_000) return 0;
+        if (saldo <= 10_000_000) return 2.0;
+        if (saldo <= 50_000_000) return 3.0;
+        if (saldo <= 100_000_000) return 3.75;
+        return 4.5;
     }
 
-    private getBungaRateBySaldo(saldo: number): number {
-        if (saldo < 5_000_000) return 0;
-        if (saldo < 10_000_000) return 0.5;
-        if (saldo < 15_000_000) return 1;
-        if (saldo < 20_000_000) return 1.5;
-        if (saldo <= 100_000_000) return 2;
-        if (saldo <= 250_000_000) return 2.5;
-        if (saldo <= 500_000_000) return 3;
-        if (saldo <= 1_000_000_000) return 3.5;
-        return 4;
+    public calculateMonthlyInterest(
+        saldo: number,
+        annualRate: number,
+    ): number {
+        if (saldo < 1_000_000 || annualRate <= 0) return 0;
+        const monthlyInterest = (saldo * (annualRate / 100)) / 12;
+        return Math.round(monthlyInterest);
     }
 
     /**
@@ -56,6 +51,7 @@ export class SimpananService {
 
     /**
      * Create new savings deposit
+     * Catatan: Setoran tunai menambah saldo murni, tanpa bunga instan di hari yang sama.
      */
     async create(createSimpananDto: CreateSimpananDto) {
         let nasabahId = createSimpananDto.nasabahId;
@@ -108,18 +104,16 @@ export class SimpananService {
 
         const currentBalance = await this.getCurrentBalance(nasabahId);
         const saldoSetelahSetoran = currentBalance + createSimpananDto.jumlahSetoran;
-        const bungaRate = this.getBungaRateBySaldo(saldoSetelahSetoran);
-        const jenisInterest = (createSimpananDto.jenisInterest || 'flat') as 'flat' | 'efektif';
-        const nominalBunga = bungaRate > 0
-            ? this.calculateInterest(saldoSetelahSetoran, bungaRate, jenisInterest)
-            : 0;
-        const saldoAkhir = saldoSetelahSetoran + nominalBunga;
+        const annualRate = this.getAnnualInterestRate(saldoSetelahSetoran);
+        const jenisInterest = (createSimpananDto.jenisInterest || 'efektif') as 'flat' | 'efektif';
+        // Saldo akhir murni bertambah sebesar setoran (bunga dibagikan secara berkala bulanan)
+        const saldoAkhir = saldoSetelahSetoran;
 
         const simpananRecord = await this.prisma.simpanan.create({
             data: {
                 nasabahId,
                 jumlahSetoran: createSimpananDto.jumlahSetoran,
-                bungaSimpanan: bungaRate,
+                bungaSimpanan: annualRate,
                 jenisInterest,
                 tanggalSetoran: createSimpananDto.tanggalSetoran || new Date(),
                 saldoAkhir,
@@ -127,16 +121,6 @@ export class SimpananService {
                 keterangan: createSimpananDto.keterangan || 'Setoran simpanan',
             },
         });
-
-        if (nominalBunga > 0) {
-            await this.prisma.transaksiBunga.create({
-                data: {
-                    simpananId: simpananRecord.id,
-                    nominalBunga,
-                    tanggalTransaksi: new Date(),
-                },
-            });
-        }
 
         return simpananRecord;
     }
@@ -167,60 +151,174 @@ export class SimpananService {
     }
 
     /**
-     * Calculate and apply interest to savings
+     * Calculate and apply monthly interest for a single customer
      */
     async applyInterest(nasabahId: number) {
         const currentBalance = await this.getCurrentBalance(nasabahId);
 
-        if (currentBalance === 0) {
-            throw new BadRequestException('Tidak ada saldo untuk dihitung bunganya');
+        if (currentBalance < 1_000_000) {
+            throw new BadRequestException('Saldo belum mencapai batas minimum untuk mendapatkan bunga (minimal Rp 1.000.000)');
         }
 
-        // Find latest active savings to get interest rate
-        const latestSimpanan = await this.prisma.simpanan.findFirst({
-            where: {
-                nasabahId,
-                status: 'aktif',
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
+        const annualRate = this.getAnnualInterestRate(currentBalance);
+        const monthlyInterest = this.calculateMonthlyInterest(currentBalance, annualRate);
 
-        if (!latestSimpanan || !latestSimpanan.bungaSimpanan) {
-            throw new BadRequestException('Tidak ada data bunga untuk nasabah ini');
+        if (monthlyInterest <= 0) {
+            throw new BadRequestException('Bunga bernilai 0 untuk saldo saat ini');
         }
 
-        // Calculate interest
-        const interest = this.calculateInterest(
-            currentBalance,
-            latestSimpanan.bungaSimpanan,
-            (latestSimpanan.jenisInterest as 'flat' | 'efektif') || 'flat',
-        );
+        const now = new Date();
+        const namaBulanList = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        const labelPeriode = `${namaBulanList[now.getMonth()]} ${now.getFullYear()}`;
+        const saldoAkhir = currentBalance + monthlyInterest;
 
-        const saldoAkhir = currentBalance + interest;
-
-        // Create interest transaction record
         const simpananRecord = await this.prisma.simpanan.create({
             data: {
                 nasabahId,
-                jumlahSetoran: interest,
+                jumlahSetoran: monthlyInterest,
+                bungaSimpanan: annualRate,
+                jenisInterest: 'efektif',
+                tanggalSetoran: now,
                 saldoAkhir,
                 status: 'aktif',
-                keterangan: 'Bunga tabungan',
+                keterangan: `Bagi Hasil / Bunga Simpanan - ${labelPeriode}`,
             },
         });
 
-        // Record interest transaction
         await this.prisma.transaksiBunga.create({
             data: {
                 simpananId: simpananRecord.id,
-                nominalBunga: interest,
-                tanggalTransaksi: new Date(),
+                nominalBunga: monthlyInterest,
+                tanggalTransaksi: now,
             },
         });
 
         return simpananRecord;
+    }
+
+    /**
+     * Proses pembagian bunga bulanan otomatis untuk seluruh nasabah aktif
+     */
+    async processMonthlyInterest(bulan?: number, tahun?: number) {
+        const now = new Date();
+        const targetMonth = bulan !== undefined ? bulan - 1 : now.getMonth();
+        const targetYear = tahun || now.getFullYear();
+
+        const namaBulanList = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
+        const labelPeriode = `${namaBulanList[targetMonth]} ${targetYear}`;
+
+        const nasabahs = await this.prisma.nasabah.findMany({
+            select: { id: true, nama: true },
+        });
+
+        const rincian: Array<{
+            nasabahId: number;
+            nama: string;
+            saldoSebelum: number;
+            sukuBungaTahunan: number;
+            nominalBunga: number;
+            saldoSesudah: number;
+            status: 'sukses' | 'dilewati_sudah_pernah' | 'dilewati_saldo_kurang';
+        }> = [];
+
+        let totalDistributed = 0;
+        let successCount = 0;
+
+        for (const n of nasabahs) {
+            const currentBalance = await this.getCurrentBalance(n.id);
+            if (currentBalance < 1_000_000) {
+                rincian.push({
+                    nasabahId: n.id,
+                    nama: n.nama,
+                    saldoSebelum: currentBalance,
+                    sukuBungaTahunan: 0,
+                    nominalBunga: 0,
+                    saldoSesudah: currentBalance,
+                    status: 'dilewati_saldo_kurang',
+                });
+                continue;
+            }
+
+            // Cek apakah sudah pernah diproses di periode ini agar tidak dobel
+            const alreadyProcessed = await this.prisma.simpanan.findFirst({
+                where: {
+                    nasabahId: n.id,
+                    keterangan: {
+                        contains: labelPeriode,
+                    },
+                },
+            });
+
+            if (alreadyProcessed) {
+                rincian.push({
+                    nasabahId: n.id,
+                    nama: n.nama,
+                    saldoSebelum: currentBalance,
+                    sukuBungaTahunan: alreadyProcessed.bungaSimpanan ?? 0,
+                    nominalBunga: 0,
+                    saldoSesudah: currentBalance,
+                    status: 'dilewati_sudah_pernah',
+                });
+                continue;
+            }
+
+            const annualRate = this.getAnnualInterestRate(currentBalance);
+            const monthlyInterest = this.calculateMonthlyInterest(currentBalance, annualRate);
+
+            if (monthlyInterest <= 0) {
+                continue;
+            }
+
+            const saldoAkhir = currentBalance + monthlyInterest;
+
+            const record = await this.prisma.simpanan.create({
+                data: {
+                    nasabahId: n.id,
+                    jumlahSetoran: monthlyInterest,
+                    bungaSimpanan: annualRate,
+                    jenisInterest: 'efektif',
+                    tanggalSetoran: now,
+                    saldoAkhir,
+                    status: 'aktif',
+                    keterangan: `Bagi Hasil / Bunga Simpanan - ${labelPeriode}`,
+                },
+            });
+
+            await this.prisma.transaksiBunga.create({
+                data: {
+                    simpananId: record.id,
+                    nominalBunga: monthlyInterest,
+                    tanggalTransaksi: now,
+                },
+            });
+
+            totalDistributed += monthlyInterest;
+            successCount++;
+
+            rincian.push({
+                nasabahId: n.id,
+                nama: n.nama,
+                saldoSebelum: currentBalance,
+                sukuBungaTahunan: annualRate,
+                nominalBunga: monthlyInterest,
+                saldoSesudah: saldoAkhir,
+                status: 'sukses',
+            });
+        }
+
+        return {
+            status: 'success',
+            periode: labelPeriode,
+            totalNasabahDiproses: successCount,
+            totalBungaDibagikan: totalDistributed,
+            rincian,
+        };
     }
 
     /**
