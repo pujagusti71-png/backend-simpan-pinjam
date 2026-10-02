@@ -123,7 +123,7 @@ export default function OriginalPinjaman({
     const [viewDetail, setViewDetail] = useState<LoanDetail | null>(null)
     const [payModalLoan, setPayModalLoan] = useState<LoanDetail | null>(null)
     const [payAmount, setPayAmount] = useState<string>('')
-    const [payDate, setPayDate] = useState<string>(new Date().toISOString().split('T')[0])
+    const [payDate, setPayDate] = useState<string>(new Date().toISOString().split('T')[0] ?? '')
     const [payStatus, setPayStatus] = useState<string>('lancar')
     const [paySubmitting, setPaySubmitting] = useState<boolean>(false)
     const [payError, setPayError] = useState<string | null>(null)
@@ -135,7 +135,7 @@ export default function OriginalPinjaman({
             ? Math.round(loan.cicilanBulanan)
             : Math.round(loan.jumlah / tenor)
         setPayAmount(String(defaultAmount))
-        setPayDate(new Date().toISOString().split('T')[0])
+        setPayDate(new Date().toISOString().split('T')[0] ?? '')
         setPayStatus('lancar')
         setPayError(null)
     }
