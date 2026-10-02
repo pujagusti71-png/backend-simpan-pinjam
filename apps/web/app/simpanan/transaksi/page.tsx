@@ -59,6 +59,9 @@ type PinjamanOption = {
     tenor: number
     cicilanBulanan: number
     status: string
+    pembayaran?: any[]
+    paidCount: number
+    isLunas: boolean
 }
 
 type SimpananRow = {
@@ -80,6 +83,7 @@ type PinjamanRow = {
     jumlahBayar: number
     tanggalBayar: string
     statusBayar: string
+    nomorCicilan?: number
 }
 
 function TransaksiContent() {
@@ -163,16 +167,25 @@ function TransaksiContent() {
             setNasabahList(nList)
 
             // Pinjaman list for selection
-            const pList = Array.isArray(pinjamanData)
-                ? pinjamanData.map((p: any) => ({
-                      id: Number(p.id),
-                      nasabahId: Number(p.nasabahId ?? p.nasabah?.id),
-                      namaNasabah: p.nasabah?.nama ?? 'Nasabah',
-                      jumlahPinjaman: Number(p.jumlahPinjaman ?? 0),
-                      tenor: Number(p.tenor ?? 0),
-                      cicilanBulanan: Number(p.cicilanBulanan ?? 0),
-                      status: p.status ?? 'active',
-                  }))
+            const pList: PinjamanOption[] = Array.isArray(pinjamanData)
+                ? pinjamanData.map((p: any) => {
+                      const payments = Array.isArray(p.pembayaran) ? p.pembayaran : []
+                      const tenor = Number(p.tenor ?? 0)
+                      const paidCount = payments.length
+                      const isLunas = p.status === 'lunas' || p.status === 'completed' || (tenor > 0 && paidCount >= tenor)
+                      return {
+                          id: Number(p.id),
+                          nasabahId: Number(p.nasabahId ?? p.nasabah?.id),
+                          namaNasabah: p.nasabah?.nama ?? 'Nasabah',
+                          jumlahPinjaman: Number(p.jumlahPinjaman ?? 0),
+                          tenor,
+                          cicilanBulanan: Number(p.cicilanBulanan ?? 0),
+                          status: isLunas ? 'lunas' : (p.status ?? 'active'),
+                          pembayaran: payments,
+                          paidCount,
+                          isLunas,
+                      }
+                  })
                 : []
             setPinjamanList(pList)
 
@@ -181,12 +194,14 @@ function TransaksiContent() {
                 setSimpananForm((prev) => ({ ...prev, nasabahId: String(firstNasabah.id) }))
             }
 
-            const firstPinjaman = pList[0]
+            const firstPinjaman = pList.find((p) => !p.isLunas) || pList[0]
             if (firstPinjaman && !pinjamanForm.pinjamanId) {
+                const nextCicilan = firstPinjaman.paidCount + 1
                 setPinjamanForm((prev) => ({
                     ...prev,
                     pinjamanId: String(firstPinjaman.id),
                     jumlahBayar: firstPinjaman.cicilanBulanan ? String(firstPinjaman.cicilanBulanan) : prev.jumlahBayar,
+                    nomorCicilan: String(nextCicilan),
                 }))
             }
 
@@ -220,6 +235,7 @@ function TransaksiContent() {
                 tanggalBayar: item.tanggalBayar ?? item.tanggalPembayaran ?? item.createdAt ?? '',
                 statusBayar: item.statusBayar ?? 'lancar',
                 pinjamanId: Number(item.pinjamanId ?? item.pinjaman?.id ?? 0),
+                nomorCicilan: item.nomorCicilan ? Number(item.nomorCicilan) : undefined,
             }))
             setPinjamanRows(pRows.sort((a, b) => new Date(b.tanggalBayar).getTime() - new Date(a.tanggalBayar).getTime()))
         } catch (err) {
@@ -253,10 +269,13 @@ function TransaksiContent() {
     // Update default nominal if pinjaman selected changes
     const handlePinjamanSelectChange = (id: string) => {
         const selected = pinjamanList.find((p) => String(p.id) === id)
+        const paidCount = selected?.paidCount ?? selected?.pembayaran?.length ?? 0
+        const nextCicilan = paidCount + 1
         setPinjamanForm((prev) => ({
             ...prev,
             pinjamanId: id,
             jumlahBayar: selected?.cicilanBulanan ? String(selected.cicilanBulanan) : prev.jumlahBayar,
+            nomorCicilan: String(nextCicilan),
         }))
     }
 
@@ -329,15 +348,28 @@ function TransaksiContent() {
             return
         }
 
+        const selected = pinjamanList.find((p) => String(p.id) === pinjamanForm.pinjamanId)
+        if (selected?.isLunas || (selected && selected.tenor > 0 && selected.paidCount >= selected.tenor)) {
+            setPinjamanError('Pinjaman ini sudah LUNAS (DONE). Seluruh cicilan telah dibayar.')
+            return
+        }
+
         try {
             setPinjamanSubmitting(true)
+            const targetNomor = pinjamanForm.nomorCicilan ? Number(pinjamanForm.nomorCicilan) : ((selected?.paidCount || 0) + 1)
             await api.createPembayaran({
                 pinjamanId: Number(pinjamanForm.pinjamanId),
                 jumlahBayar: nominal,
                 tanggalBayar: new Date(`${pinjamanForm.tanggalBayar}T00:00:00`).toISOString(),
                 statusBayar: pinjamanForm.statusBayar,
-                nomorCicilan: pinjamanForm.nomorCicilan ? Number(pinjamanForm.nomorCicilan) : undefined,
+                nomorCicilan: targetNomor,
             })
+
+            const isDone = selected && selected.tenor > 0 && targetNomor >= selected.tenor
+            alert(
+                `Pembayaran cicilan ke-${targetNomor} berhasil dicatat!` +
+                (isDone ? '\n\nSELAMAT! Pinjaman nasabah ini kini telah LUNAS (DONE)!' : '')
+            )
 
             setPinjamanForm((prev) => ({
                 ...prev,
@@ -838,6 +870,61 @@ function TransaksiContent() {
                             </div>
 
                             <form onSubmit={handlePinjamanSubmit} className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {(() => {
+                                    const selectedPinjaman = pinjamanList.find((p) => String(p.id) === pinjamanForm.pinjamanId)
+                                    const selectedPaidCount = selectedPinjaman?.paidCount ?? selectedPinjaman?.pembayaran?.length ?? 0
+                                    const selectedTenor = selectedPinjaman?.tenor || 12
+                                    const selectedIsDone = Boolean(selectedPinjaman?.isLunas || (selectedTenor > 0 && selectedPaidCount >= selectedTenor))
+                                    const nextCicilan = selectedPaidCount + 1
+
+                                    if (!selectedPinjaman) return null
+
+                                    if (selectedIsDone) {
+                                        return (
+                                            <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 md:col-span-2 flex items-center gap-3">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-lg shadow-sm">
+                                                    ✓
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-extrabold text-sm text-emerald-900">PINJAMAN SUDAH LUNAS (DONE)</h4>
+                                                        <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                                                            Selesai
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-emerald-800 mt-0.5">
+                                                        Nasabah telah membayar sebanyak {selectedPaidCount} dari {selectedTenor} kali cicilan pinjaman ini. Tidak ada tagihan cicilan yang tersisa.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    return (
+                                        <div className="rounded-xl border border-sky-300 bg-sky-50 p-4 text-sky-950 md:col-span-2 space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold uppercase tracking-wider text-sky-800">
+                                                    Identifikasi Angsuran Otomatis
+                                                </span>
+                                                <span className="rounded-full bg-sky-600 px-3 py-0.5 text-xs font-extrabold text-white shadow-xs">
+                                                    Cicilan ke-{nextCicilan} dari {selectedTenor}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-sky-950">
+                                                Ini adalah pembayaran untuk <span className="underline underline-offset-2 font-bold text-sky-900">cicilan yang ke-{nextCicilan}</span>.
+                                            </p>
+                                            <p className="text-xs text-sky-800">
+                                                Nasabah telah membayar sebanyak {selectedPaidCount} kali sebelumnya. Tersisa {Math.max(0, selectedTenor - nextCicilan)} cicilan setelah pembayaran ini.
+                                            </p>
+                                            {nextCicilan === selectedTenor && (
+                                                <p className="text-xs font-bold text-emerald-700 mt-1">
+                                                    ★ Ini adalah cicilan terakhir (ke-{selectedTenor}). Setelah pembayaran ini tersimpan, pinjaman otomatis LUNAS (DONE)!
+                                                </p>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
+
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700">
                                         Pilih Pinjaman Nasabah <span className="text-rose-500">*</span>
@@ -848,11 +935,14 @@ function TransaksiContent() {
                                         className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
                                     >
                                         <option value="">-- Pilih Pinjaman --</option>
-                                        {pinjamanList.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                ID #{p.id} - {p.namaNasabah} (Pinjaman: {formatCurrency(p.jumlahPinjaman)} | Tenor: {p.tenor} bln)
-                                            </option>
-                                        ))}
+                                        {pinjamanList.map((p) => {
+                                            const isDone = p.isLunas || (p.tenor > 0 && p.paidCount >= p.tenor)
+                                            return (
+                                                <option key={p.id} value={p.id}>
+                                                    ID #{p.id} - {p.namaNasabah} (Pinjaman: {formatCurrency(p.jumlahPinjaman)} | Tenor: {p.tenor} bln) — {isDone ? '✓ DONE (Lunas)' : `Sudah bayar ${p.paidCount}x (Ke-${p.paidCount + 1})`}
+                                                </option>
+                                            )
+                                        })}
                                     </select>
                                 </div>
 
@@ -908,18 +998,25 @@ function TransaksiContent() {
 
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-slate-700">
-                                        Cicilan Ke- (Opsional)
+                                        Cicilan Ke-
                                     </label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={pinjamanForm.nomorCicilan}
-                                        onChange={(e) =>
-                                            setPinjamanForm((prev) => ({ ...prev, nomorCicilan: e.target.value }))
-                                        }
-                                        placeholder="Contoh: 1, 2, 3..."
-                                        className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
-                                    />
+                                    <div className="relative mt-1.5">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={pinjamanForm.nomorCicilan}
+                                            onChange={(e) =>
+                                                setPinjamanForm((prev) => ({ ...prev, nomorCicilan: e.target.value }))
+                                            }
+                                            placeholder="Contoh: 1, 2, 3..."
+                                            className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-semibold text-slate-900 shadow-sm outline-none transition focus:border-sky-500"
+                                        />
+                                        {pinjamanForm.nomorCicilan && (
+                                            <span className="absolute right-3 top-2 rounded bg-sky-100 px-2 py-0.5 text-xs font-bold text-sky-800">
+                                                Otomatis: Cicilan ke-{pinjamanForm.nomorCicilan}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {pinjamanError && (
@@ -928,16 +1025,29 @@ function TransaksiContent() {
                                     </div>
                                 )}
 
-                                <div className="flex justify-end md:col-span-2">
-                                    <button
-                                        type="submit"
-                                        disabled={pinjamanSubmitting || loading}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                                    >
-                                        <Banknote className="h-4 w-4" />
-                                        {pinjamanSubmitting ? 'Menyimpan...' : 'Catat pembayaran'}
-                                    </button>
-                                </div>
+                                {(() => {
+                                    const selectedPinjaman = pinjamanList.find((p) => String(p.id) === pinjamanForm.pinjamanId)
+                                    const selectedPaidCount = selectedPinjaman?.paidCount ?? selectedPinjaman?.pembayaran?.length ?? 0
+                                    const selectedTenor = selectedPinjaman?.tenor || 12
+                                    const selectedIsDone = Boolean(selectedPinjaman?.isLunas || (selectedTenor > 0 && selectedPaidCount >= selectedTenor))
+
+                                    return (
+                                        <div className="flex justify-end md:col-span-2">
+                                            <button
+                                                type="submit"
+                                                disabled={pinjamanSubmitting || loading || selectedIsDone}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                            >
+                                                <Banknote className="h-4 w-4" />
+                                                {selectedIsDone
+                                                    ? 'Sudah Lunas (Done)'
+                                                    : pinjamanSubmitting
+                                                    ? 'Menyimpan...'
+                                                    : `Catat Pembayaran Cicilan ke-${pinjamanForm.nomorCicilan || 1}`}
+                                            </button>
+                                        </div>
+                                    )
+                                })()}
                             </form>
                         </div>
 
@@ -985,6 +1095,7 @@ function TransaksiContent() {
                                             <th className="px-3 py-3">ID Bayar</th>
                                             <th className="px-3 py-3">Nama Nasabah</th>
                                             <th className="px-3 py-3">ID Pinjaman</th>
+                                            <th className="px-3 py-3">Cicilan Ke-</th>
                                             <th className="px-3 py-3">Jumlah Bayar</th>
                                             <th className="px-3 py-3">Tanggal Pembayaran</th>
                                             <th className="px-3 py-3">Status</th>
@@ -993,13 +1104,13 @@ function TransaksiContent() {
                                     <tbody className="divide-y divide-slate-100">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={6} className="py-8 text-center text-slate-400">
+                                                <td colSpan={7} className="py-8 text-center text-slate-400">
                                                     Memuat pembayaran pinjaman...
                                                 </td>
                                             </tr>
                                         ) : filteredPinjaman.length === 0 ? (
                                             <tr>
-                                                <td colSpan={6} className="py-8 text-center text-slate-500">
+                                                <td colSpan={7} className="py-8 text-center text-slate-500">
                                                     Belum ada transaksi pembayaran pinjaman yang tercatat.
                                                 </td>
                                             </tr>
@@ -1014,6 +1125,9 @@ function TransaksiContent() {
                                                     </td>
                                                     <td className="px-3 py-3 font-mono text-xs text-slate-600">
                                                         Pinjaman #{row.pinjamanId}
+                                                    </td>
+                                                    <td className="px-3 py-3 font-bold text-sky-700 text-xs">
+                                                        {row.nomorCicilan ? `Cicilan ke-${row.nomorCicilan}` : '-'}
                                                     </td>
                                                     <td className="px-3 py-3 font-bold text-slate-900">
                                                         {formatCurrency(row.jumlahBayar)}

@@ -128,7 +128,9 @@ export class PembayaranService {
         const updatedPayments = await this.prisma.pembayaran.findMany({ where: { pinjamanId } });
         const totalPaid = updatedPayments.reduce((sum, payment) => sum + Number(payment.jumlahBayar ?? 0), 0);
         const totalQuoted = Number(pinjaman.jumlahPinjaman ?? 0) + Number(pinjaman.totalBunga ?? 0);
-        const statusPinjaman = totalPaid >= totalQuoted ? 'lunas' : 'active';
+        const isTenorFulfilled = tenor > 0 && updatedPayments.length >= tenor;
+        const isAmountFulfilled = totalPaid >= totalQuoted;
+        const statusPinjaman = (isTenorFulfilled || isAmountFulfilled) ? 'lunas' : 'active';
 
         await this.prisma.pinjaman.update({
             where: { id: pinjamanId },

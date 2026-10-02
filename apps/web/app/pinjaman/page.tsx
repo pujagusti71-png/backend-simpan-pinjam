@@ -33,6 +33,8 @@ type NasabahDetail = {
   pekerjaan: string
   penghasilan: number
   cicilan: number
+  cicilanBulanan?: number
+  totalPembayaran?: number
   estimasiPengeluaran: number
   riwayatPembayaran: string
   rasio: number
@@ -48,6 +50,18 @@ type NasabahDetail = {
   risiko: string
   risk: string
   rekomendasi: string
+  status?: string
+  pembayaran?: Array<{
+    id: number
+    nomorCicilan?: number
+    jumlahBayar: number
+    tanggalBayar?: string
+    tanggalPembayaran?: string
+    statusBayar?: string
+  }>
+  paidCount?: number
+  totalPaid?: number
+  isLunas?: boolean
 }
 
 const defaultForm: LoanForm = {
@@ -82,15 +96,20 @@ export default function PinjamanPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadPinjaman = async () => {
-      setIsLoading(true)
-      setFetchError(null)
+  const loadPinjaman = async () => {
+    setIsLoading(true)
+    setFetchError(null)
 
-      try {
-        const data = await api.getPinjaman()
-        if (Array.isArray(data)) {
-          const mapped = data.map((item: any, index: number) => ({
+    try {
+      const data = await api.getPinjaman()
+      if (Array.isArray(data)) {
+        const mapped = data.map((item: any, index: number) => {
+          const tenor = Number(item.tenor ?? item.tenorBulan ?? 12)
+          const pembayaran = Array.isArray(item.pembayaran) ? item.pembayaran : []
+          const paidCount = pembayaran.length
+          const totalPaid = pembayaran.reduce((sum: number, p: any) => sum + Number(p.jumlahBayar || 0), 0)
+          const isLunas = item.status === 'lunas' || item.status === 'completed' || (tenor > 0 && paidCount >= tenor)
+          return {
             id: item.id ?? index + 1,
             nama: item.nama ?? item.nasabah?.nama ?? '',
             nik: item.nik ?? item.nasabah?.nik ?? '',
@@ -104,14 +123,16 @@ export default function PinjamanPage() {
               lahir: item.ibu?.lahir ?? item.tanggalLahirIbu ?? '',
               alamat: item.ibu?.alamat ?? item.alamatIbu ?? '',
             },
-            pekerjaan: item.pekerjaan ?? 'PNS',
-            penghasilan: Number(item.penghasilan ?? 0),
+            pekerjaan: item.pekerjaan ?? item.nasabah?.pekerjaan ?? 'PNS',
+            penghasilan: Number(item.penghasilan ?? item.nasabah?.penghasilan ?? 0),
             cicilan: Number(item.cicilan ?? item.cicilanBulanan ?? 0),
-            estimasiPengeluaran: Number(item.estimasiPengeluaran ?? 0),
+            cicilanBulanan: Number(item.cicilanBulanan ?? item.cicilan ?? 0),
+            totalPembayaran: Number(item.totalPembayaran ?? 0),
+            estimasiPengeluaran: Number(item.estimasiPengeluaran ?? item.nasabah?.estimasiPengeluaran ?? 0),
             riwayatPembayaran: item.riwayatPembayaran ?? item.riwayat ?? 'Lancar',
             rasio: Number(item.rasio ?? 0),
             jumlah: Number(item.jumlah ?? item.jumlahPinjaman ?? 0),
-            tenor: Number(item.tenor ?? item.tenorBulan ?? 12),
+            tenor,
             bunga: String(item.bunga ?? item.sukuBunga ?? 0),
             tujuan: item.tujuan ?? '',
             tanggalPinjaman: item.tanggalPinjaman ?? item.tanggalPengajuan ?? '',
@@ -122,19 +143,26 @@ export default function PinjamanPage() {
             risiko: item.risiko ?? 'Rendah',
             risk: item.risk ?? item.risiko ?? 'Rendah',
             rekomendasi: item.rekomendasi ?? 'Approve',
-          }))
-          setPengajuanList(mapped)
-        } else {
-          setPengajuanList([])
-        }
-      } catch (error) {
-        console.error('Gagal memuat data pinjaman', error)
-        setFetchError(error instanceof Error ? error.message : 'Gagal memuat data pinjaman')
-      } finally {
-        setIsLoading(false)
+            status: isLunas ? 'lunas' : (item.status ?? 'active'),
+            pembayaran,
+            paidCount,
+            totalPaid,
+            isLunas,
+          }
+        })
+        setPengajuanList(mapped)
+      } else {
+        setPengajuanList([])
       }
+    } catch (error) {
+      console.error('Gagal memuat data pinjaman', error)
+      setFetchError(error instanceof Error ? error.message : 'Gagal memuat data pinjaman')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
+  useEffect(() => {
     loadPinjaman()
   }, [])
 
@@ -260,10 +288,20 @@ export default function PinjamanPage() {
           tenor: row.tenor,
           risiko: row.risiko,
           rekomendasi: row.rekomendasi,
+          status: row.status,
+          paidCount: row.paidCount,
+          isLunas: row.isLunas,
+          cicilanBulanan: row.cicilanBulanan,
+          totalPembayaran: row.totalPembayaran,
+          pembayaran: row.pembayaran,
         }))}
         detailRows={pengajuanList.map((row) => ({
           id: row.id,
           nama: row.nama,
+          nik: row.nik,
+          hp: row.hp,
+          email: row.email,
+          alamat: row.alamat,
           pekerjaan: row.pekerjaan,
           jumlah: row.jumlah,
           tenor: row.tenor,
@@ -273,8 +311,15 @@ export default function PinjamanPage() {
           penghasilan: row.penghasilan,
           estimasiPengeluaran: row.estimasiPengeluaran,
           cicilan: row.cicilan,
+          cicilanBulanan: row.cicilanBulanan,
+          totalPembayaran: row.totalPembayaran,
+          totalPaid: row.totalPaid,
+          paidCount: row.paidCount,
+          isLunas: row.isLunas,
+          status: row.status,
           risiko: row.risiko,
           rekomendasi: row.rekomendasi,
+          pembayaran: row.pembayaran,
         }))}
         onNew={() => setIsPengajuanOpen(true)}
         onSelect={(id) => {
@@ -294,6 +339,7 @@ export default function PinjamanPage() {
         }}
         onSubmit={handleCreatePengajuan}
         onCancel={() => setIsPengajuanOpen(false)}
+        onPaymentSuccess={loadPinjaman}
       />
     </>
   )
